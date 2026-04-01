@@ -165,21 +165,30 @@ public class RawitAnnotationProcessor extends AbstractProcessor {
         }
 
         // --- Stage 4: Generate source files via JavaPoet ---
-        // Group trees by enclosing class first (needed for both source gen and injection)
+        // Source generation runs for ALL valid trees regardless of whether the .class file
+        // exists. Only bytecode injection is gated on the .class file being present.
+        // Group trees by enclosing class (needed for injection step).
         final Map<String, List<MergeTree>> treesByClass = new LinkedHashMap<>();
         for (final MergeTree tree : allTrees) {
             treesByClass.computeIfAbsent(tree.group().enclosingClassName(), k -> new ArrayList<>())
                     .add(tree);
         }
 
-        // Only generate source and inject bytecode for classes whose .class file exists.
+        if (debug) {
+            messager.printMessage(Diagnostic.Kind.NOTE,
+                    "[curry.debug] Generating source files for " + allTrees.size() + " tree(s)");
+        }
+        javaPoetGenerator.generate(allTrees, processingEnv);
+
+        // --- Stage 5: Inject parameterless overloads via ASM, once per enclosing class ---
         // In a standard single-pass javac/Maven compile, annotation processing runs before
         // .class files are written, so the .class file may not exist yet. We skip injection
         // silently in that case — users who need injection must run a two-pass compile
         // (see README for details).
-        final List<MergeTree> treesWithClassFile = new ArrayList<>();
         for (final Map.Entry<String, List<MergeTree>> entry : treesByClass.entrySet()) {
             final String enclosingClassName = entry.getKey();
+            final List<MergeTree> classTrees = entry.getValue();
+
             final Optional<Path> classFilePath = overloadResolver.resolve(enclosingClassName, processingEnv);
             if (classFilePath.isEmpty()) {
                 if (debug) {
@@ -188,36 +197,6 @@ public class RawitAnnotationProcessor extends AbstractProcessor {
                                     + enclosingClassName.replace('/', '.')
                                     + " — skipping bytecode injection (run a two-pass compile for injection)");
                 }
-                continue;
-            }
-            treesWithClassFile.addAll(entry.getValue());
-        }
-
-        if (treesWithClassFile.isEmpty()) {
-            return false;
-        }
-
-        if (debug) {
-            messager.printMessage(Diagnostic.Kind.NOTE,
-                    "[curry.debug] Generating source files for " + treesWithClassFile.size() + " tree(s)");
-        }
-        javaPoetGenerator.generate(treesWithClassFile, processingEnv);
-
-        // --- Stage 5: Inject parameterless overloads via ASM, once per enclosing class ---
-        // Re-group by enclosing class (only trees with .class files)
-        final Map<String, List<MergeTree>> treesWithClassFileByClass = new LinkedHashMap<>();
-        for (final MergeTree tree : treesWithClassFile) {
-            treesWithClassFileByClass.computeIfAbsent(tree.group().enclosingClassName(), k -> new ArrayList<>())
-                    .add(tree);
-        }
-
-        for (final Map.Entry<String, List<MergeTree>> entry : treesWithClassFileByClass.entrySet()) {
-            final String enclosingClassName = entry.getKey();
-            final List<MergeTree> classTrees = entry.getValue();
-
-            final Optional<Path> classFilePath = overloadResolver.resolve(enclosingClassName, processingEnv);
-            if (classFilePath.isEmpty()) {
-                // Should not happen since we already checked above, but guard anyway
                 continue;
             }
 

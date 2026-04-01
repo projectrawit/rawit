@@ -5,6 +5,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import javax.tools.*;
 import java.io.File;
+import java.io.IOException;
 import java.io.StringWriter;
 import java.net.URI;
 import java.nio.file.Path;
@@ -42,7 +43,6 @@ class ElementValidatorTest {
         assertNotNull(compiler, "javax.tools.JavaCompiler not available — run tests with a JDK, not a JRE");
 
         DiagnosticCollector<JavaFileObject> collector = new DiagnosticCollector<>();
-        StandardJavaFileManager fm = compiler.getStandardFileManager(collector, Locale.ROOT, null);
 
         JavaFileObject sourceFile = new SimpleJavaFileObject(
                 URI.create("string:///" + className.replace('.', '/') + ".java"),
@@ -61,10 +61,14 @@ class ElementValidatorTest {
                 "-classpath", System.getProperty("java.class.path")
         );
 
-        StringWriter out = new StringWriter();
-        JavaCompiler.CompilationTask task = compiler.getTask(
-                out, fm, collector, options, null, List.of(sourceFile));
-        task.call();
+        try (StandardJavaFileManager fm = compiler.getStandardFileManager(collector, Locale.ROOT, null)) {
+            StringWriter out = new StringWriter();
+            JavaCompiler.CompilationTask task = compiler.getTask(
+                    out, fm, collector, options, null, List.of(sourceFile));
+            task.call();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to close file manager", e);
+        }
 
         return collector.getDiagnostics();
     }

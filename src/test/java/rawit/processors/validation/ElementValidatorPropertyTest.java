@@ -64,7 +64,6 @@ class ElementValidatorPropertyTest {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assertNotNull(compiler, "getSystemJavaCompiler() returned null — tests must run on a JDK, not a JRE");
         DiagnosticCollector<JavaFileObject> collector = new DiagnosticCollector<>();
-        StandardJavaFileManager fm = compiler.getStandardFileManager(collector, Locale.ROOT, null);
 
         JavaFileObject sourceFile = new SimpleJavaFileObject(
                 URI.create("string:///" + className.replace('.', '/') + ".java"),
@@ -82,7 +81,11 @@ class ElementValidatorPropertyTest {
                 "-classpath", System.getProperty("java.class.path")
         );
 
-        compiler.getTask(new StringWriter(), fm, collector, options, null, List.of(sourceFile)).call();
+        try (StandardJavaFileManager fm = compiler.getStandardFileManager(collector, Locale.ROOT, null)) {
+            compiler.getTask(new StringWriter(), fm, collector, options, null, List.of(sourceFile)).call();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to close file manager", e);
+        }
         return collector.getDiagnostics();
     }
 

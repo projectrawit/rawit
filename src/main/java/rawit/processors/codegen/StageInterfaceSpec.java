@@ -183,13 +183,23 @@ public class StageInterfaceSpec {
 
     private String branchingInterfaceName(final String prevParamName, final int position) {
         final String suffix = isCurry ? "StageCaller" : "StageConstructor";
-        if (position == 0) {
-            // Divergence at first param → use method name only
-            return toPascalCase(tree.group().groupName()) + suffix;
+        // For constructors, groupName is "<init>" which is not a valid Java identifier.
+        // Use the enclosing class simple name instead.
+        final String groupName = tree.group().groupName();
+        final String baseName;
+        if ("<init>".equals(groupName)) {
+            final String enclosing = tree.group().enclosingClassName();
+            final int lastSlash = enclosing.lastIndexOf('/');
+            baseName = lastSlash < 0 ? enclosing : enclosing.substring(lastSlash + 1);
+        } else {
+            baseName = groupName;
         }
-        // Divergence after shared prefix → use method name + previous param name
-        // e.g. for method "bar" diverging after param "x": "BarXStageCaller"
-        return toPascalCase(tree.group().groupName()) + toPascalCase(prevParamName) + suffix;
+        if (position == 0) {
+            // Divergence at first param → use base name only
+            return toPascalCase(baseName) + suffix;
+        }
+        // Divergence after shared prefix → use base name + previous param name
+        return toPascalCase(baseName) + toPascalCase(prevParamName) + suffix;
     }
 
     // -------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 package rawit.processors.inject;
 
 import org.objectweb.asm.*;
+import org.objectweb.asm.util.CheckClassAdapter;
 import rawit.processors.model.MergeNode;
 import rawit.processors.model.MergeNode.BranchingNode;
 import rawit.processors.model.MergeNode.SharedNode;
@@ -64,13 +65,15 @@ public class BytecodeInjector {
 
             final byte[] modifiedBytes = writer.toByteArray();
 
-            // Verify the bytecode before writing
+            // Verify the bytecode using ASM's CheckClassAdapter before writing.
+            // If verification fails, preserve the original .class and emit an ERROR.
+            final java.io.PrintWriter verifyOutput = new java.io.PrintWriter(new java.io.StringWriter());
             try {
-                new ClassReader(modifiedBytes); // basic structural check
+                CheckClassAdapter.verify(new ClassReader(modifiedBytes), false, verifyOutput);
             } catch (final Exception e) {
                 messager.printMessage(Diagnostic.Kind.ERROR,
                         "BytecodeInjector: bytecode verification failed for " + classFilePath
-                                + " — " + e.getMessage());
+                                + " — " + e.getMessage() + ". Original .class preserved.");
                 return;
             }
 
@@ -78,15 +81,15 @@ public class BytecodeInjector {
             messager.printMessage(Diagnostic.Kind.NOTE,
                     "BytecodeInjector: injected overloads into " + classFilePath);
 
-        } catch (final VerifyError e) {
-            messager.printMessage(Diagnostic.Kind.ERROR,
-                    "BytecodeInjector: VerifyError injecting into " + classFilePath
-                            + " — " + e.getMessage() + ". Original .class preserved.");
-            // Original bytes are already on disk — nothing to restore
         } catch (final IOException e) {
             messager.printMessage(Diagnostic.Kind.ERROR,
                     "BytecodeInjector: cannot write .class file: " + classFilePath
                             + " — " + e.getMessage());
+        } catch (final Exception e) {
+            // Unexpected error — original .class is still on disk
+            messager.printMessage(Diagnostic.Kind.ERROR,
+                    "BytecodeInjector: unexpected error injecting into " + classFilePath
+                            + " — " + e.getMessage() + ". Original .class preserved.");
         }
     }
 
