@@ -184,7 +184,7 @@ Rawit catches mistakes early. You'll get a clear `javac` error for:
 
 | Mistake | Error |
 |---|---|
-| `@Invoker` on a zero-parameter method | `invoker requires at least one parameter` |
+| `@Invoker` on a zero-parameter method | `@Invoker requires at least one parameter` |
 | `@Invoker` on a `private` method | `@Invoker requires at least package-private visibility` |
 | `@Constructor` on a non-constructor element | `@Constructor may only target constructors` |
 | `@Constructor` on a zero-parameter constructor | `staged construction requires at least one parameter` |

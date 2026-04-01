@@ -101,9 +101,8 @@ clear error message, so that I catch mistakes at compile time rather than at run
 #### Acceptance Criteria
 
 1. WHEN `@Invoker` is placed on a method with zero parameters, THEN THE Processor SHALL emit a
-   `Diagnostic.Kind.ERROR` message stating that invoker requires at least one parameter, referencing
+   `Diagnostic.Kind.ERROR` message stating that `@Invoker` requires at least one parameter, referencing
    the offending element.
-2. WHEN `@Invoker` is placed on a private method, THEN THE Processor SHALL emit a
    `Diagnostic.Kind.ERROR` message stating that `@Invoker` requires at least package-private
    visibility, referencing the offending element.
 3. WHEN `@Invoker` is placed on a valid method (instance or static) with one or more non-private
@@ -119,7 +118,7 @@ apply the same compile-time-safe construction pattern to any class.
 #### Acceptance Criteria
 
 1. WHEN `@Invoker` is placed on a constructor with zero parameters, THEN THE Processor SHALL emit a
-   `Diagnostic.Kind.ERROR` message stating that invoker requires at least one parameter, referencing
+   `Diagnostic.Kind.ERROR` message stating that `@Invoker` requires at least one parameter, referencing
    the offending element.
 2. WHEN `@Invoker` is placed on a private constructor, THEN THE Processor SHALL emit a
    `Diagnostic.Kind.ERROR` message stating that `@Invoker` requires at least package-private

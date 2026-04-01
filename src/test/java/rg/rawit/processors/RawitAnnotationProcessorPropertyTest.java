@@ -270,7 +270,7 @@ class RawitAnnotationProcessorPropertyTest {
             @ForAll("distinctMethodNames") List<String> methodNames
     ) throws Exception {
         // Feature: curry-to-invoker-rename, Property 16: Multiple annotations produce separate Caller_Classes
-        final String className = "MultiCurry_" + methodNames.size()
+        final String className = "MultiInvoker_" + methodNames.size()
                 + "_" + Long.toHexString(System.nanoTime() & 0xFFFFFFFFL);
 
         // Build source with one @Invoker method per name, each returning x + y
@@ -353,12 +353,12 @@ class RawitAnnotationProcessorPropertyTest {
             final Class<?> cls = loader.loadClass(className);
             final Object instance = cls.getDeclaredConstructor().newInstance();
 
-            // Build the chain up to the InvokeStageCaller
+            // Build the chain up to the InvokeStageInvoker
             final Object addStage = cls.getMethod("add").invoke(instance);
             final Object xStage = reflectInvokeInt(addStage, "x", x);
             final Object invokeStage = reflectInvokeInt(xStage, "y", y);
 
-            // Call invoke() multiple times on the same InvokeStageCaller instance
+            // Call invoke() multiple times on the same InvokeStageInvoker instance
             final Object result1 = reflectInvoke(invokeStage, "invoke");
             final Object result2 = reflectInvoke(invokeStage, "invoke");
             final Object result3 = reflectInvoke(invokeStage, "invoke");
