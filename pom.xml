@@ -29,8 +29,8 @@
     </developers>
 
     <scm>
-        <connection>scm:git:git://github.com/ronnygunawan/rawit.git</connection>
-        <developerConnection>scm:git:ssh://github.com/ronnygunawan/rawit.git</developerConnection>
+        <connection>scm:git:https://github.com/ronnygunawan/rawit.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/ronnygunawan/rawit.git</developerConnection>
         <url>https://github.com/ronnygunawan/rawit</url>
     </scm>
 
