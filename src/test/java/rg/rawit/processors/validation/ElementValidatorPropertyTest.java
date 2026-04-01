@@ -333,7 +333,7 @@ class ElementValidatorPropertyTest {
 
         long errorCount = countErrors(diags);
         assertEquals(1, errorCount,
-                "Expected exactly 1 error for private @Curry constructor with %d params, got %d. Diagnostics: %s"
+                "Expected exactly 1 error for private @Invoker constructor with %d params, got %d. Diagnostics: %s"
                 .formatted(paramTypes.size(), errorCount, diags));
     }
 

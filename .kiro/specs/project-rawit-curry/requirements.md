@@ -10,26 +10,10 @@ rather than generating a separate companion class.
 When `@Invoker` is placed on a method `bar(int x, int y)` in class `Foo`, the processor injects into
 `Foo`'s bytecode:
 
-- A parameterless overload `bar()` that returns the first stage interface (`Foo.Bar.XStageInvoker`).
-- An inner class `Foo.Bar` that implements all stage interfaces and holds the accumulated arguments.
-- A set of stage interfaces nested inside `Foo.Bar`, one per parameter, each named after the
-  parameter (e.g. `XStageInvoker`, `YStageInvoker`). Each stage interface exposes a single method
-  named after the parameter (e.g. `x(int x)`) that returns the next stage interface. The last
-  stage's method returns an `InvokeStageInvoker` whose `invoke()` method calls the original
-  annotated method and returns its result.
-
-Usage after annotation processing:
-
-```java
-foo.bar().x(10).y(20).invoke();
-```
-
-When `@Constructor` is placed on a constructor `Foo(int id, String name)`, the processor injects
-into `Foo`'s bytecode:
-
-- A parameterless overload `bar()` that returns the first stage interface (`Foo.Bar.XStageInvoker`).
-- An inner class `Foo.Bar` that implements all stage interfaces and holds the accumulated arguments.
-- A set of stage interfaces nested inside `Foo.Bar`, one per parameter, each named after the
+- A parameterless overload `bar()` that returns the first stage interface (`Bar.XStageInvoker`).
+- A top-level class `Bar` (in the same package as `Foo`) that implements all stage interfaces and
+  holds the accumulated arguments.
+- A set of stage interfaces nested inside `Bar`, one per parameter, each named after the
   parameter (e.g. `XStageInvoker`, `YStageInvoker`). Each stage interface exposes a single method
   named after the parameter (e.g. `x(int x)`) that returns the next stage interface. The last
   stage's method returns an `InvokeStageInvoker` whose `invoke()` method calls the original
@@ -45,10 +29,10 @@ When `@Constructor` is placed on a constructor `Foo(int id, String name)`, the p
 into `Foo`'s bytecode:
 
 - A `public static` method `constructor()` that returns the first stage interface
-  (`Foo.Constructor.IdStageConstructor`).
-- An inner class `Foo.Constructor` that implements all stage interfaces and holds the accumulated
-  arguments.
-- A set of stage interfaces nested inside `Foo.Constructor`, one per parameter, each named
+  (`Constructor.IdStageConstructor`).
+- A top-level class `Constructor` (in the same package as `Foo`) that implements all stage
+  interfaces and holds the accumulated arguments.
+- A set of stage interfaces nested inside `Constructor`, one per parameter, each named
   `<ParameterName>StageConstructor` in PascalCase (e.g. `IdStageConstructor`,
   `NameStageConstructor`). The last stage's method returns a `ConstructStageInvoker` whose
   `construct()` method calls `new Foo(...)` and returns the new instance.
@@ -67,7 +51,7 @@ The pattern works for both instance methods and static methods, as well as const
 - **Annotated_Element**: The method or constructor carrying `@Invoker`.
 - **Processor**: The `RawitAnnotationProcessor` that runs during `javac` compilation and drives bytecode manipulation.
 - **Bytecode_Manipulator**: The component (e.g. ASM or Javassist) that modifies the original `.class` file in the build output directory.
-- **Caller_Class**: The generated inner class (e.g. `Foo.Bar` for method `bar`) injected into the enclosing class's bytecode. It implements all Stage_Interfaces and accumulates arguments.
+- **Caller_Class**: The generated top-level class (e.g. `Bar` for method `bar`) in the same package as the enclosing class. It implements all Stage_Interfaces and accumulates arguments.
 - **Stage_Interface**: A generated single-method interface nested inside the Caller_Class, named `<ParameterName>StageInvoker` (e.g. `XStageInvoker`). One Stage_Interface is created per parameter.
 - **Stage_Method**: The single method on a Stage_Interface, named after the parameter (e.g. `x(int x)`). It returns the next Stage_Interface, or the InvokeStageInvoker for the last stage.
 - **Parameterless_Overload**: The zero-argument method injected into the original class that starts the staged invocation chain by returning the first Stage_Interface.
@@ -83,7 +67,7 @@ The pattern works for both instance methods and static methods, as well as const
 - **Round**: A single pass of annotation processing performed by `javac`.
 - **Processing_Environment**: The `javax.annotation.processing.ProcessingEnvironment` provided to the Processor at init time.
 - **Constructor_Annotation**: The `@rawit.Constructor` source-retention annotation placed on a constructor.
-- **Constructor_Caller_Class**: The generated `public static` inner class named `Constructor` injected into the enclosing class's bytecode. It implements all StageConstructor_Interfaces and accumulates arguments for the constructor call.
+- **Constructor_Caller_Class**: The generated top-level class named `Constructor` (in the same package as the enclosing class). It implements all StageConstructor_Interfaces and accumulates arguments for the constructor call.
 - **StageConstructor_Interface**: A generated single-method interface nested inside the Constructor_Caller_Class, named `<ParameterName>StageConstructor` in PascalCase (e.g. `IdStageConstructor`). One StageConstructor_Interface is created per parameter.
 - **ConstructStageInvoker**: A generated interface with a single zero-argument method `construct()` that calls `new EnclosingClass(...)` with all accumulated arguments and returns the new instance. Analogous to InvokeStageInvoker for `@Invoker`.
 - **Constructor_Entry_Point**: The `public static` method named `constructor()` (always this literal name) injected into the enclosing class that starts the staged construction chain by returning the first StageConstructor_Interface.
@@ -103,6 +87,7 @@ clear error message, so that I catch mistakes at compile time rather than at run
 1. WHEN `@Invoker` is placed on a method with zero parameters, THEN THE Processor SHALL emit a
    `Diagnostic.Kind.ERROR` message stating that `@Invoker` requires at least one parameter, referencing
    the offending element.
+2. WHEN `@Invoker` is placed on a private method, THEN THE Processor SHALL emit a
    `Diagnostic.Kind.ERROR` message stating that `@Invoker` requires at least package-private
    visibility, referencing the offending element.
 3. WHEN `@Invoker` is placed on a valid method (instance or static) with one or more non-private
