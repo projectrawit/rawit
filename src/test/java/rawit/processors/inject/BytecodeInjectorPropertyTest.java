@@ -326,16 +326,15 @@ class BytecodeInjectorPropertyTest {
 
             assertTrue(errors.isEmpty(), "no errors expected: " + errors);
 
-            // Expected return descriptor: L<ClassName>$<PascalMethod>$<PascalFirstParam>StageCaller;
-            final String expectedReturnDescriptor = "L" + className + "$"
-                    + toPascalCase(methodName) + "$"
-                    + toPascalCase(params.get(0).name()) + "StageCaller;";
+            // Expected return descriptor: L<PascalMethod>;
+            // (The return type is now the top-level caller class, not the first stage interface)
+            final String expectedReturnDescriptor = "L" + toPascalCase(methodName) + ";";
             final String expectedMethodDescriptor = "()" + expectedReturnDescriptor;
 
             final String actualDescriptor = zeroParamMethodDescriptor(classFile, methodName);
             assertNotNull(actualDescriptor, "parameterless overload must exist");
             assertEquals(expectedMethodDescriptor, actualDescriptor,
-                    "return type must be the first stage interface");
+                    "return type must be the caller class");
         } finally {
             deleteDir(tempDir);
         }

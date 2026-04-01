@@ -172,8 +172,8 @@ together.
     - **Property 19: Injection idempotency — re-running the injector is a no-op**
     - **Validates: Requirements 3.1, 3.2, 3.3, 8.2, 9.2**
 
-- [ ] 9. Wire everything into `RawitAnnotationProcessor`
-  - [ ] 9.1 Update `RawitAnnotationProcessor.process()` to use all components
+- [x] 9. Wire everything into `RawitAnnotationProcessor`
+  - [x] 9.1 Update `RawitAnnotationProcessor.process()` to use all components
     - Collect elements annotated with `@Curry` and `@Constructor` from `roundEnv`
     - Delegate each element to `ElementValidator`; skip invalid elements
     - Build `AnnotatedMethod` models from valid elements
@@ -185,7 +185,7 @@ together.
     - Emit additional `NOTE` messages per stage when `curry.debug=true` (requirement 10.3)
     - Return `false` from `process()` (requirement 9.3)
     - _Requirements: 7.1, 7.2, 9.1, 9.3, 10.1, 10.3, 16.5_
-  - [ ]* 9.2 Write end-to-end integration tests
+  - [x] 9.2 Write end-to-end integration tests
     - Use `javax.tools.JavaCompiler` to compile small annotated source strings with the processor
     - Load resulting `.class` files via `URLClassLoader`
     - Reflectively invoke the parameterless overload, chain all stage methods, call `.invoke()` /
@@ -193,18 +193,18 @@ together.
     - Cover: instance method, static method, constructor (`@Curry`), `@Constructor`, overload group
       with branching, prefix overload
     - _Requirements: 6.6, 8.1, 8.2, 12.4, 15, 16, 19.3, 19.4_
-  - [ ]* 9.3 Write property test for end-to-end pipeline — Properties 15, 16, 18
+  - [x] 9.3 Write property test for end-to-end pipeline — Properties 15, 16, 18
     - **Property 15: Round-trip equivalence — chain invocation equals direct invocation**
     - **Property 16: Multiple annotations produce separate Caller_Classes**
     - **Property 18: Invoke idempotency — calling invoke() multiple times produces equal results**
     - **Validates: Requirements 6.6, 7.1, 7.2, 8.1, 8.4, 12.4, 19.3, 19.4, 20.7**
-  - [ ]* 9.4 Write property test for constructor pipeline — Properties 25, 26, 27
+  - [x] 9.4 Write property test for constructor pipeline — Properties 25, 26, 27
     - **Property 25: constructor() entry point is public static**
     - **Property 26: Constructor_Caller_Class is injected as a public static inner class named Constructor**
     - **Property 27: ConstructStageCaller has a construct() method returning the enclosing type**
     - **Validates: Requirements 16.1, 16.2, 17.1, 19.2**
 
-- [ ] 10. Final checkpoint — Ensure all tests pass
+- [x] 10. Final checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

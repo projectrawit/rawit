@@ -12,6 +12,9 @@ import java.util.List;
  * @param methodName           simple method name, e.g. {@code "bar"} or {@code "<init>"}
  * @param isStatic             {@code true} if the method is declared {@code static}
  * @param isConstructor        {@code true} if this represents a constructor
+ * @param isConstructorAnnotation {@code true} if annotated with {@code @Constructor} (as opposed
+ *                             to {@code @Curry}); only meaningful when {@code isConstructor} is
+ *                             {@code true}
  * @param parameters           ordered list of parameters
  * @param returnTypeDescriptor JVM return type descriptor, e.g. {@code "I"} or {@code "V"}
  * @param checkedExceptions    binary names of declared checked exception types
@@ -23,12 +26,14 @@ public record AnnotatedMethod(
         String methodName,
         boolean isStatic,
         boolean isConstructor,
+        boolean isConstructorAnnotation,
         List<Parameter> parameters,
         String returnTypeDescriptor,
         List<String> checkedExceptions,
         int accessFlags
 ) {
-    /** Convenience constructor that defaults {@code accessFlags} to {@code ACC_PUBLIC} (0x0001). */
+    /** Convenience constructor that defaults {@code accessFlags} to {@code ACC_PUBLIC} (0x0001)
+     *  and {@code isConstructorAnnotation} to {@code false}. */
     public AnnotatedMethod(
             String enclosingClassName,
             String methodName,
@@ -38,8 +43,23 @@ public record AnnotatedMethod(
             String returnTypeDescriptor,
             List<String> checkedExceptions
     ) {
-        this(enclosingClassName, methodName, isStatic, isConstructor,
+        this(enclosingClassName, methodName, isStatic, isConstructor, false,
                 parameters, returnTypeDescriptor, checkedExceptions, 0x0001 /* ACC_PUBLIC */);
+    }
+
+    /** Convenience constructor that defaults {@code accessFlags} to {@code ACC_PUBLIC} (0x0001). */
+    public AnnotatedMethod(
+            String enclosingClassName,
+            String methodName,
+            boolean isStatic,
+            boolean isConstructor,
+            List<Parameter> parameters,
+            String returnTypeDescriptor,
+            List<String> checkedExceptions,
+            int accessFlags
+    ) {
+        this(enclosingClassName, methodName, isStatic, isConstructor, false,
+                parameters, returnTypeDescriptor, checkedExceptions, accessFlags);
     }
 
     public AnnotatedMethod {

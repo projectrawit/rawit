@@ -35,9 +35,9 @@ public class StageInterfaceSpec {
 
     public StageInterfaceSpec(final MergeTree tree) {
         this.tree = tree;
-        // A group is @Constructor if the group name is "<init>" and the first member is a constructor
-        this.isCurry = tree.group().members().stream()
-                .anyMatch(m -> !m.isConstructor());
+        // isCurry is true for @Curry annotations (including @Curry on constructors)
+        // isCurry is false only for @Constructor annotations
+        this.isCurry = tree.group().members().stream().anyMatch(m -> !m.isConstructorAnnotation());
     }
 
     /**
@@ -82,9 +82,15 @@ public class StageInterfaceSpec {
                 }
             }
             case TerminalNode terminal -> {
-                // If there's a continuation, we need a combined interface that exposes both
+                // If there's a continuation, generate a combined interface that exposes both
                 // invoke()/construct() and the next-stage method(s)
                 if (terminal.continuation() != null) {
+                    // Generate the combined interface
+                    final String combinedIfaceName = combinedInterfaceName(prevParamName, position);
+                    final TypeSpec combinedIface = buildCombinedInterface(
+                            combinedIfaceName, terminal.continuation(), prevParamName, position);
+                    out.add(combinedIface);
+                    // Recurse into the continuation to generate its stage interfaces
                     buildInterfaces(terminal.continuation(), prevParamName, position, out);
                 }
                 // Terminal itself is handled by TerminalInterfaceSpec — no stage interface here
@@ -174,11 +180,12 @@ public class StageInterfaceSpec {
     private String branchingInterfaceName(final String prevParamName, final int position) {
         final String suffix = isCurry ? "StageCaller" : "StageConstructor";
         if (position == 0) {
-            // Divergence at first param → use method name
+            // Divergence at first param → use method name only
             return toPascalCase(tree.group().groupName()) + suffix;
         }
-        // Divergence after shared prefix → use previous param name
-        return toPascalCase(prevParamName) + suffix;
+        // Divergence after shared prefix → use method name + previous param name
+        // e.g. for method "bar" diverging after param "x": "BarXStageCaller"
+        return toPascalCase(tree.group().groupName()) + toPascalCase(prevParamName) + suffix;
     }
 
     // -------------------------------------------------------------------------
@@ -205,8 +212,9 @@ public class StageInterfaceSpec {
             case TerminalNode terminal -> {
                 if (terminal.continuation() != null) {
                     // The terminal node also has a continuation — the return type is the
-                    // combined interface (same name as the continuation's interface)
-                    yield nextTypeName(terminal.continuation(), currentParamName, nextPosition);
+                    // combined interface that exposes both invoke() and the continuation's methods
+                    yield com.squareup.javapoet.ClassName.bestGuess(
+                            combinedInterfaceName(currentParamName, nextPosition));
                 }
                 yield terminalTypeName();
             }
@@ -216,6 +224,70 @@ public class StageInterfaceSpec {
     private TypeName terminalTypeName() {
         return com.squareup.javapoet.ClassName.bestGuess(
                 isCurry ? "InvokeStageCaller" : "ConstructStageCaller");
+    }
+
+    /**
+     * Returns the name of the combined interface for a {@link TerminalNode} with continuation.
+     * The combined interface exposes both {@code invoke()}/{@code construct()} and the
+     * continuation's stage methods.
+     *
+     * <p>Named {@code <PrevParam>WithInvokeStageCaller} (e.g. {@code YWithInvokeStageCaller}
+     * for the stage after parameter {@code y}).
+     */
+    private String combinedInterfaceName(final String prevParamName, final int position) {
+        final String suffix = isCurry ? "WithInvokeStageCaller" : "WithConstructStageCaller";
+        if (prevParamName == null || prevParamName.isEmpty()) {
+            return toPascalCase(tree.group().groupName()) + suffix;
+        }
+        return toPascalCase(prevParamName) + suffix;
+    }
+
+    /**
+     * Builds the combined interface for a {@link TerminalNode} with continuation.
+     * The combined interface extends the terminal interface and adds the continuation's
+     * stage methods.
+     */
+    private TypeSpec buildCombinedInterface(
+            final String ifaceName,
+            final MergeNode continuation,
+            final String prevParamName,
+            final int position
+    ) {
+        final TypeSpec.Builder builder = TypeSpec.interfaceBuilder(ifaceName)
+                .addModifiers(Modifier.PUBLIC);
+
+        // Add the terminal method (invoke() or construct())
+        final String terminalMethodName = isCurry ? "invoke" : "construct";
+        final TypeName terminalReturnType;
+        if (isCurry) {
+            // For @Curry, the return type is the representative method's return type
+            // We use void as a placeholder — the actual return type is set by TerminalInterfaceSpec
+            terminalReturnType = com.squareup.javapoet.TypeName.VOID;
+        } else {
+            terminalReturnType = com.squareup.javapoet.TypeName.VOID;
+        }
+        // Actually, we need to get the return type from the representative method
+        // For simplicity, we'll use the terminal interface as a superinterface
+        builder.addSuperinterface(terminalTypeName());
+
+        // Add the continuation's stage methods
+        switch (continuation) {
+            case SharedNode shared -> {
+                final TypeName returnType = nextTypeName(shared.next(), shared.paramName(), position + 1);
+                builder.addMethod(buildStageMethod(shared.paramName(), shared.typeDescriptor(), returnType));
+            }
+            case BranchingNode branching -> {
+                for (final MergeNode.Branch branch : branching.branches()) {
+                    final TypeName returnType = nextTypeName(branch.next(), branch.paramName(), position + 1);
+                    builder.addMethod(buildStageMethod(branch.paramName(), branch.typeDescriptor(), returnType));
+                }
+            }
+            case TerminalNode terminal -> {
+                // Nested terminal — shouldn't happen in practice
+            }
+        }
+
+        return builder.build();
     }
 
     // -------------------------------------------------------------------------

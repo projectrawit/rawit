@@ -59,8 +59,8 @@ class TerminalInterfaceSpecPropertyTest {
     @Provide
     Arbitrary<AnnotatedMethod> anyConstructorMethod() {
         return anyCheckedExceptions().map(exs -> new AnnotatedMethod(
-                "com/example/Foo", "<init>", false, true,
-                List.of(new Parameter("id", "I")), "V", exs));
+                "com/example/Foo", "<init>", false, true, true,
+                List.of(new Parameter("id", "I")), "V", exs, 0x0001));
     }
 
     private static String toSource(TypeSpec spec) {

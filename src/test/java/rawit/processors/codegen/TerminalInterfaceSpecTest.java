@@ -28,8 +28,9 @@ class TerminalInterfaceSpecTest {
     }
 
     private static AnnotatedMethod constructorMethod(List<String> exceptions) {
-        return new AnnotatedMethod("com/example/Foo", "<init>", false, true,
-                List.of(new Parameter("id", "I")), "V", exceptions);
+        // Use isConstructorAnnotation=true to indicate @Constructor annotation
+        return new AnnotatedMethod("com/example/Foo", "<init>", false, true, true,
+                List.of(new Parameter("id", "I")), "V", exceptions, 0x0001);
     }
 
     private static String toSource(TypeSpec spec) {

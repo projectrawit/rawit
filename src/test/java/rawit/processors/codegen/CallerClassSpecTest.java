@@ -32,8 +32,8 @@ class CallerClassSpecTest {
     }
 
     private static AnnotatedMethod constructorMethod(Parameter... params) {
-        return new AnnotatedMethod("com/example/Foo", "<init>", false, true,
-                List.of(params), "V", List.of());
+        return new AnnotatedMethod("com/example/Foo", "<init>", false, true, true,
+                List.of(params), "V", List.of(), 0x0001);
     }
 
     private static Parameter p(String name, String type) {
@@ -134,7 +134,11 @@ class CallerClassSpecTest {
         AnnotatedMethod m = instanceMethod("bar", "V", List.of(), p("x", "I"), p("y", "I"));
         TypeSpec spec = new CallerClassSpec(linearTree(m)).build();
         String source = toSource(spec);
-        assertTrue(source.contains("implements XStageCaller"), "must implement first stage interface");
+        // The Caller_Class no longer implements the first stage interface directly
+        // (to avoid cyclic inheritance when written as a top-level class).
+        // Instead, it exposes the first stage method directly.
+        assertTrue(source.contains("public YStageCaller x(int x)"),
+                "must have the first stage method x(int x) returning YStageCaller");
     }
 
     // -------------------------------------------------------------------------

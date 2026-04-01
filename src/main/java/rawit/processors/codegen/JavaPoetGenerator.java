@@ -46,46 +46,49 @@ public class JavaPoetGenerator {
     private void generateTree(final MergeTree tree, final Filer filer) {
         final TypeSpec callerClass = new CallerClassSpec(tree).build();
         final String packageName = resolvePackageName(tree.group().enclosingClassName());
-        final String enclosingSimple = resolveSimpleName(tree.group().enclosingClassName());
 
-        // The Caller_Class is a nested class of the enclosing class.
-        // We write it as a top-level class in a sub-package or as a nested class.
-        // Standard practice: write as a member type of the enclosing class by using
-        // JavaFile with the enclosing class name as the type name.
-        // However, since we can't modify the original source, we write the Caller_Class
-        // as a standalone top-level class in the same package, named <Enclosing>$<Caller>.
-        // The bytecode injector will handle the InnerClasses attribute.
-        // For now, write as a separate top-level class.
-        final String callerFqn = enclosingSimple + "$" + callerClass.name;
-        final TypeSpec topLevel = TypeSpec.classBuilder(callerFqn)
-                .addModifiers(javax.lang.model.element.Modifier.PUBLIC)
-                .addType(callerClass)
-                .build();
+        // Write the Caller_Class as a top-level class:
+        // 1. Strip the 'static' modifier (not valid for top-level classes)
+        // 2. Qualify superinterface names with the class name (e.g. XStageCaller → Add.XStageCaller)
+        //    because a top-level class cannot reference its own nested interfaces by simple name
+        //    in the 'implements' clause.
+        final TypeSpec callerAsTopLevel = asTopLevelClass(callerClass, packageName);
 
-        // Actually, the correct approach per the design is to write the Caller_Class
-        // as a nested class inside the enclosing class's generated source.
-        // We write a JavaFile whose type is the Caller_Class directly, using the
-        // enclosing class as the "enclosing element" hint via the Filer.
-        // The simplest correct approach: write the Caller_Class as a standalone file
-        // named <EnclosingClass>.<CallerClass> in the same package.
-        final JavaFile javaFile = JavaFile.builder(packageName, callerClass)
+        final JavaFile javaFile = JavaFile.builder(packageName, callerAsTopLevel)
                 .skipJavaLangImports(true)
                 .build();
 
         try {
             javaFile.writeTo(filer);
             messager.printMessage(Diagnostic.Kind.NOTE,
-                    "Generated " + packageName + "." + callerClass.name
+                    "Generated " + packageName + "." + callerAsTopLevel.name
                             + " for " + tree.group().enclosingClassName());
         } catch (final javax.annotation.processing.FilerException e) {
             // File already exists — idempotency guard
             messager.printMessage(Diagnostic.Kind.NOTE,
-                    "Skipping already-generated " + callerClass.name
+                    "Skipping already-generated " + callerAsTopLevel.name
                             + " for " + tree.group().enclosingClassName() + ": " + e.getMessage());
         } catch (final IOException e) {
             messager.printMessage(Diagnostic.Kind.ERROR,
-                    "Failed to write generated source for " + callerClass.name + ": " + e.getMessage());
+                    "Failed to write generated source for " + callerAsTopLevel.name + ": " + e.getMessage());
         }
+    }
+
+    /**
+     * Converts a nested-class {@link TypeSpec} (with {@code public static final} modifiers) into
+     * a top-level class suitable for writing via the {@link Filer}:
+     * <ol>
+     *   <li>Removes the {@code static} modifier (not valid for top-level classes).</li>
+     * </ol>
+     *
+     * <p>Note: the Caller_Class no longer implements its own nested stage interface in the
+     * {@code implements} clause (which would cause a cyclic inheritance error in Java). Instead,
+     * the Caller_Class exposes the first stage method directly as a regular public method.
+     */
+    private static TypeSpec asTopLevelClass(final TypeSpec typeSpec, final String packageName) {
+        final TypeSpec.Builder builder = typeSpec.toBuilder();
+        builder.modifiers.remove(javax.lang.model.element.Modifier.STATIC);
+        return builder.build();
     }
 
     // -------------------------------------------------------------------------

@@ -108,10 +108,13 @@ class CallerClassSpecPropertyTest {
         TypeSpec spec = new CallerClassSpec(linearTree(m)).build();
         String source = toSource(spec);
 
-        // The Caller_Class must implement the first stage interface
-        String firstStageIface = toPascalCase(params.get(0).name()) + "StageCaller";
-        assertTrue(source.contains("implements " + firstStageIface),
-                "Caller_Class must implement " + firstStageIface);
+        // The Caller_Class no longer implements the first stage interface directly
+        // (to avoid cyclic inheritance when written as a top-level class).
+        // Instead, it exposes the first stage method directly.
+        String firstParamName = params.get(0).name();
+        // The Caller_Class should have a public method named after the first parameter
+        assertTrue(source.contains("public") && source.contains(firstParamName + "("),
+                "Caller_Class must have the first stage method " + firstParamName + "()");
     }
 
     @Property(tries = 100)
@@ -203,8 +206,9 @@ class CallerClassSpecPropertyTest {
     void property8_constructorCallerClassCarriesGeneratedAnnotation(
             @ForAll("paramList") List<Parameter> params
     ) {
-        AnnotatedMethod m = new AnnotatedMethod("com/example/Foo", "<init>", false, true,
-                params, "V", List.of());
+        // Use isConstructorAnnotation=true to indicate @Constructor annotation
+        AnnotatedMethod m = new AnnotatedMethod("com/example/Foo", "<init>", false, true, true,
+                params, "V", List.of(), 0x0001);
         TypeSpec spec = new CallerClassSpec(linearTree(m)).build();
         String source = toSource(spec);
 

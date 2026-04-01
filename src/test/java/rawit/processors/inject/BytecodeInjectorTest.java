@@ -260,7 +260,7 @@ class BytecodeInjectorTest {
     }
 
     @Test
-    void inject_instanceMethod_returnTypeIsFirstStageInterface(@TempDir final Path tempDir) throws Exception {
+    void inject_instanceMethod_returnTypeIsCallerClass(@TempDir final Path tempDir) throws Exception {
         final String source = "public class FooReturnType { public int bar(int x, int y) { return x + y; } }";
         final Path classFile = compileClass("FooReturnType", source, tempDir);
 
@@ -278,7 +278,8 @@ class BytecodeInjectorTest {
 
         final String descriptor = zeroParamMethodDescriptor(classFile, "bar");
         assertNotNull(descriptor, "parameterless bar() must exist");
-        assertEquals("()LFooReturnType$Bar$XStageCaller;", descriptor,
-                "return type must be the first stage interface");
+        // The return type is the top-level caller class Bar (same package as FooReturnType)
+        assertEquals("()LBar;", descriptor,
+                "return type must be the top-level caller class (Bar)");
     }
 }

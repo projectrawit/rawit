@@ -149,18 +149,23 @@ public class BytecodeInjector {
         // -------------------------------------------------------------------------
 
         private void injectOverload(final MergeTree tree, final String overloadName) {
+            final boolean isConstructorAnnotationGroup = tree.group().members().stream()
+                    .allMatch(m -> m.isConstructorAnnotation());
             final boolean isConstructorGroup = tree.group().members().stream()
                     .allMatch(m -> m.isConstructor());
             final boolean isStatic = !isConstructorGroup && tree.group().members().stream()
                     .anyMatch(m -> m.isStatic());
 
             // Determine access flags
-            final int accessFlags = resolveAccessFlags(tree, isConstructorGroup, isStatic);
+            final int accessFlags = resolveAccessFlags(tree, isConstructorAnnotationGroup, isStatic);
 
-            // Determine the caller class binary name and first stage interface binary name
+            // Determine the caller class binary name
+            // The return type is the caller class itself (not the first stage interface),
+            // because the caller class is a top-level class and cannot implement its own
+            // nested interface (cyclic inheritance). The caller class exposes the first
+            // stage method directly.
             final String callerClassBinaryName = resolveCallerClassBinaryName(tree);
-            final String firstStageIfaceBinaryName = resolveFirstStageInterfaceBinaryName(tree);
-            final String returnDescriptor = "L" + firstStageIfaceBinaryName + ";";
+            final String returnDescriptor = "L" + callerClassBinaryName + ";";
             final String methodDescriptor = "()" + returnDescriptor;
 
             final MethodVisitor mv = cv.visitMethod(
@@ -169,8 +174,8 @@ public class BytecodeInjector {
 
             mv.visitCode();
 
-            if (isConstructorGroup) {
-                // @Constructor: public static constructor() { return new Constructor(); }
+            if (isConstructorAnnotationGroup || (isConstructorGroup && !isConstructorAnnotationGroup)) {
+                // @Constructor or @Curry on constructor: public static factory() { return new CallerClass(); }
                 mv.visitTypeInsn(Opcodes.NEW, callerClassBinaryName);
                 mv.visitInsn(Opcodes.DUP);
                 mv.visitMethodInsn(Opcodes.INVOKESPECIAL, callerClassBinaryName,
@@ -205,18 +210,32 @@ public class BytecodeInjector {
         // -------------------------------------------------------------------------
 
         private static String resolveOverloadName(final MergeTree tree) {
+            final boolean isConstructorAnnotationGroup = tree.group().members().stream()
+                    .allMatch(m -> m.isConstructorAnnotation());
+            if (isConstructorAnnotationGroup) {
+                // @Constructor: the entry point is always named "constructor"
+                return "constructor";
+            }
             final boolean isConstructorGroup = tree.group().members().stream()
                     .allMatch(m -> m.isConstructor());
             if (isConstructorGroup) {
-                return "constructor";
+                // @Curry on a constructor: the entry point is named after the class (lowercased)
+                final String enclosingClassName = tree.group().enclosingClassName();
+                final int lastSlash = enclosingClassName.lastIndexOf('/');
+                final String simpleName = lastSlash < 0 ? enclosingClassName
+                        : enclosingClassName.substring(lastSlash + 1);
+                return simpleName.toLowerCase();
             }
             return tree.group().groupName();
         }
 
         private static int resolveAccessFlags(final MergeTree tree,
-                                               final boolean isConstructorGroup,
+                                               final boolean isConstructorAnnotationGroup,
                                                final boolean isStatic) {
-            if (isConstructorGroup) {
+            final boolean isConstructorGroup = tree.group().members().stream()
+                    .allMatch(m -> m.isConstructor());
+            if (isConstructorAnnotationGroup || isConstructorGroup) {
+                // @Constructor or @Curry on constructor: always public static
                 return Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC;
             }
             // Derive access from the representative method's stored accessFlags
@@ -232,13 +251,31 @@ public class BytecodeInjector {
 
         private static String resolveCallerClassBinaryName(final MergeTree tree) {
             final String enclosing = tree.group().enclosingClassName();
-            final boolean isConstructorGroup = tree.group().members().stream()
-                    .allMatch(m -> m.isConstructor());
-            if (isConstructorGroup) {
-                return enclosing + "$Constructor";
+            final boolean isConstructorAnnotationGroup = tree.group().members().stream()
+                    .allMatch(m -> m.isConstructorAnnotation());
+            if (isConstructorAnnotationGroup) {
+                // @Constructor: the Constructor class is a top-level class in the same package
+                // as the enclosing class, named "Constructor"
+                final String packagePrefix = packagePrefix(enclosing);
+                return packagePrefix + "Constructor";
             }
+            // @Curry: the Caller_Class is a top-level class in the same package as the enclosing
+            // class, named after the method in PascalCase (e.g. "Add" for method "add")
             final String groupName = tree.group().groupName();
-            return enclosing + "$" + toPascalCase(groupName);
+            final String packagePrefix = packagePrefix(enclosing);
+            if ("<init>".equals(groupName)) {
+                // @Curry on a constructor: use the class name + "Curry" as the caller class name
+                final int lastSlash = enclosing.lastIndexOf('/');
+                final String simpleName = lastSlash < 0 ? enclosing : enclosing.substring(lastSlash + 1);
+                return packagePrefix + simpleName + "Curry";
+            }
+            return packagePrefix + toPascalCase(groupName);
+        }
+
+        private static String packagePrefix(final String binaryClassName) {
+            final int lastSlash = binaryClassName.lastIndexOf('/');
+            if (lastSlash < 0) return "";
+            return binaryClassName.substring(0, lastSlash + 1);
         }
 
         private static String resolveFirstStageInterfaceBinaryName(final MergeTree tree) {

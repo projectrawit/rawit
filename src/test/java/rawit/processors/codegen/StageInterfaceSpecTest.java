@@ -221,8 +221,9 @@ class StageInterfaceSpecTest {
 
     @Test
     void constructor_interfaceNamedWithStageConstructorSuffix() {
-        AnnotatedMethod m = new AnnotatedMethod("com/example/Foo", "<init>", false, true,
-                List.of(p("id", "I"), p("name", "Ljava/lang/String;")), "V", List.of());
+        // Use isConstructorAnnotation=true to indicate @Constructor annotation
+        AnnotatedMethod m = new AnnotatedMethod("com/example/Foo", "<init>", false, true, true,
+                List.of(p("id", "I"), p("name", "Ljava/lang/String;")), "V", List.of(), 0x0001);
         OverloadGroup g = group("<init>", m);
         MergeNode root = new SharedNode("id", "I",
                 new SharedNode("name", "Ljava/lang/String;",

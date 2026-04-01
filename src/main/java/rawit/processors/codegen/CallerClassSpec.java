@@ -42,7 +42,9 @@ public class CallerClassSpec {
 
     public CallerClassSpec(final MergeTree tree) {
         this.tree = tree;
-        this.isCurry = tree.group().members().stream().anyMatch(m -> !m.isConstructor());
+        // isCurry is true for @Curry annotations (including @Curry on constructors)
+        // isCurry is false only for @Constructor annotations
+        this.isCurry = tree.group().members().stream().anyMatch(m -> !m.isConstructorAnnotation());
         this.callerClassName = resolveCallerClassName();
     }
 
@@ -53,10 +55,6 @@ public class CallerClassSpec {
         final TypeSpec.Builder classBuilder = TypeSpec.classBuilder(callerClassName)
                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
                 .addAnnotation(GENERATED_ANNOTATION);
-
-        // Determine the first stage interface name and add implements clause
-        final TypeName firstStageType = firstStageTypeName();
-        classBuilder.addSuperinterface(firstStageType);
 
         // Add enclosing instance field for instance methods
         final AnnotatedMethod representative = tree.group().members().get(0);
@@ -126,27 +124,23 @@ public class CallerClassSpec {
                 final String accClassName = accumulatorClassName(nextAccumulated);
 
                 final MethodSpec.Builder stageMethod = MethodSpec.methodBuilder(shared.paramName())
-                        .addAnnotation(Override.class)
                         .addModifiers(Modifier.PUBLIC)
                         .returns(returnType)
                         .addParameter(paramType, shared.paramName())
                         .addStatement("return new $L($L)", accClassName, buildAccumulatorArgs(accumulated, shared.paramName(), representative));
 
+                // Add @Override only when the current class implements the stage interface
+                // (i.e., when we're inside an accumulator class, not the top-level Caller_Class)
+                if (!accumulated.isEmpty()) {
+                    stageMethod.addAnnotation(Override.class);
+                }
+
                 addCheckedExceptions(stageMethod, representative);
                 classBuilder.addMethod(stageMethod.build());
 
-                // Build the accumulator class for the next stage
+                // Build the accumulator class for the next stage (recursion is handled inside)
                 final TypeSpec acc = buildAccumulatorClass(accClassName, nextAccumulated, shared.next(), representative);
                 accumulators.add(acc);
-
-                // Recurse into the accumulator (it will add its own methods and further accumulators)
-                buildStageImplementations(
-                        TypeSpec.classBuilder(accClassName), // dummy — we already built it above
-                        accumulators,
-                        shared.next(),
-                        nextAccumulated,
-                        representative
-                );
             }
             case BranchingNode branching -> {
                 for (final MergeNode.Branch branch : branching.branches()) {
@@ -156,11 +150,14 @@ public class CallerClassSpec {
                     final String accClassName = accumulatorClassName(nextAccumulated);
 
                     final MethodSpec.Builder stageMethod = MethodSpec.methodBuilder(branch.paramName())
-                            .addAnnotation(Override.class)
                             .addModifiers(Modifier.PUBLIC)
                             .returns(returnType)
                             .addParameter(paramType, branch.paramName())
                             .addStatement("return new $L($L)", accClassName, buildAccumulatorArgs(accumulated, branch.paramName(), representative));
+
+                    if (!accumulated.isEmpty()) {
+                        stageMethod.addAnnotation(Override.class);
+                    }
 
                     addCheckedExceptions(stageMethod, representative);
                     classBuilder.addMethod(stageMethod.build());
@@ -187,10 +184,23 @@ public class CallerClassSpec {
             final MergeNode next,
             final AnnotatedMethod representative
     ) {
-        final TypeName nextStageType = nextStageTypeName(next, accumulated.isEmpty() ? "" : accumulated.get(accumulated.size() - 1).name(), accumulated.size());
         final TypeSpec.Builder builder = TypeSpec.classBuilder(className)
-                .addModifiers(Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
-                .addSuperinterface(nextStageType);
+                .addModifiers(Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL);
+
+        // Determine the superinterface(s) for this accumulator class
+        if (next instanceof TerminalNode terminal && terminal.continuation() != null) {
+            // Prefix overload: this accumulator implements the combined interface
+            // (which extends InvokeStageCaller and adds the continuation's stage methods)
+            final TypeName combinedType = nextStageTypeName(next,
+                    accumulated.isEmpty() ? "" : accumulated.get(accumulated.size() - 1).name(),
+                    accumulated.size());
+            builder.addSuperinterface(combinedType);
+        } else {
+            final TypeName nextStageType = nextStageTypeName(next,
+                    accumulated.isEmpty() ? "" : accumulated.get(accumulated.size() - 1).name(),
+                    accumulated.size());
+            builder.addSuperinterface(nextStageType);
+        }
 
         // Add enclosing instance field for instance methods
         if (!representative.isStatic() && !representative.isConstructor()) {
@@ -236,9 +246,16 @@ public class CallerClassSpec {
             final AnnotatedMethod overload
     ) {
         final String terminalMethodName = isCurry ? "invoke" : "construct";
-        final TypeName returnType = isCurry
-                ? TerminalInterfaceSpec.descriptorToTypeName(overload.returnTypeDescriptor())
-                : enclosingTypeName();
+        final TypeName returnType;
+        if (!isCurry) {
+            // @Constructor: construct() returns the enclosing class instance
+            returnType = enclosingTypeName();
+        } else if (overload.isConstructor()) {
+            // @Curry on a constructor: invoke() returns the enclosing class instance
+            returnType = enclosingTypeName();
+        } else {
+            returnType = TerminalInterfaceSpec.descriptorToTypeName(overload.returnTypeDescriptor());
+        }
 
         final MethodSpec.Builder mb = MethodSpec.methodBuilder(terminalMethodName)
                 .addAnnotation(Override.class)
@@ -281,6 +298,13 @@ public class CallerClassSpec {
     private String resolveCallerClassName() {
         if (!isCurry) return "Constructor";
         final String groupName = tree.group().groupName();
+        if ("<init>".equals(groupName)) {
+            // @Curry on a constructor: use the class name + "Curry" as the caller class name
+            final String enclosing = tree.group().enclosingClassName();
+            final int lastSlash = enclosing.lastIndexOf('/');
+            final String simpleName = lastSlash < 0 ? enclosing : enclosing.substring(lastSlash + 1);
+            return simpleName + "Curry";
+        }
         return StageInterfaceSpec.toPascalCase(groupName);
     }
 
@@ -290,6 +314,11 @@ public class CallerClassSpec {
 
     private TypeName nextStageTypeName(final MergeNode node, final String prevParam, final int position) {
         return new StageInterfaceSpec(tree).nextTypeName(node, prevParam, position);
+    }
+
+    private TypeName terminalTypeName() {
+        return com.squareup.javapoet.ClassName.bestGuess(
+                isCurry ? "InvokeStageCaller" : "ConstructStageCaller");
     }
 
     private TypeName enclosingTypeName() {
