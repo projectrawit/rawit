@@ -114,10 +114,14 @@ public class RawitAnnotationProcessor extends AbstractProcessor {
         }
 
         // --- Stage 2: Group into OverloadGroups ---
-        // Key: enclosingClassName + "\0" + groupName
+        // Key: enclosingClassName + "\0" + groupName + "\0" + annotationKind
+        // The annotation kind is included so that a @Curry constructor and a @Constructor
+        // constructor in the same class are NOT merged into the same group (they have different
+        // entry-point names, stage interface suffixes, and injection strategies).
         final Map<String, List<AnnotatedMethod>> groupMap = new LinkedHashMap<>();
         for (final AnnotatedMethod m : validMethods) {
-            final String key = m.enclosingClassName() + "\0" + m.methodName();
+            final String annotationKind = m.isConstructorAnnotation() ? "CONSTRUCTOR" : "CURRY";
+            final String key = m.enclosingClassName() + "\0" + m.methodName() + "\0" + annotationKind;
             groupMap.computeIfAbsent(key, k -> new ArrayList<>()).add(m);
         }
 
@@ -169,18 +173,18 @@ public class RawitAnnotationProcessor extends AbstractProcessor {
         }
 
         // Only generate source and inject bytecode for classes whose .class file exists.
-        // If the .class file is not found (e.g. -proc:only mode), skip silently.
+        // If the .class file is not found, emit an ERROR — the declaring class must be compiled
+        // before the annotation processor can inject the parameterless overload.
         final List<MergeTree> treesWithClassFile = new ArrayList<>();
         for (final Map.Entry<String, List<MergeTree>> entry : treesByClass.entrySet()) {
             final String enclosingClassName = entry.getKey();
             final Optional<Path> classFilePath = overloadResolver.resolve(enclosingClassName, processingEnv);
             if (classFilePath.isEmpty()) {
-                if (debug) {
-                    messager.printMessage(Diagnostic.Kind.NOTE,
-                            "[curry.debug] .class file not found for "
-                                    + enclosingClassName.replace('/', '.')
-                                    + " — skipping source generation and bytecode injection");
-                }
+                messager.printMessage(Diagnostic.Kind.ERROR,
+                        ".class file not found for " + enclosingClassName.replace('/', '.')
+                                + " — Rawit cannot inject generated overloads. "
+                                + "Ensure the declaring class is compiled and available on the "
+                                + "annotation processor classpath (avoid -proc:only without prior compilation).");
                 continue;
             }
             treesWithClassFile.addAll(entry.getValue());

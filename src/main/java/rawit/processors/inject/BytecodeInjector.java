@@ -278,33 +278,6 @@ public class BytecodeInjector {
             return binaryClassName.substring(0, lastSlash + 1);
         }
 
-        private static String resolveFirstStageInterfaceBinaryName(final MergeTree tree) {
-            final String callerBinaryName = resolveCallerClassBinaryName(tree);
-            final boolean isConstructorGroup = tree.group().members().stream()
-                    .allMatch(m -> m.isConstructor());
-            final String suffix = isConstructorGroup ? "StageConstructor" : "StageCaller";
-
-            final MergeNode root = tree.root();
-            final String firstStageName = resolveFirstStageInterfaceName(root, tree, suffix);
-            return callerBinaryName + "$" + firstStageName;
-        }
-
-        private static String resolveFirstStageInterfaceName(final MergeNode node,
-                                                               final MergeTree tree,
-                                                               final String suffix) {
-            return switch (node) {
-                case SharedNode shared -> toPascalCase(shared.paramName()) + suffix;
-                case BranchingNode branching -> toPascalCase(tree.group().groupName()) + suffix;
-                case TerminalNode terminal -> {
-                    if (terminal.continuation() != null) {
-                        yield resolveFirstStageInterfaceName(terminal.continuation(), tree, suffix);
-                    }
-                    // Pure terminal at root — use terminal interface name
-                    yield (suffix.contains("Constructor")) ? "ConstructStageCaller" : "InvokeStageCaller";
-                }
-            };
-        }
-
         private static String toPascalCase(final String name) {
             if (name == null || name.isEmpty()) return name;
             return Character.toUpperCase(name.charAt(0)) + name.substring(1);

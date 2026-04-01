@@ -52,7 +52,7 @@ public class JavaPoetGenerator {
         // 2. Qualify superinterface names with the class name (e.g. XStageCaller → Add.XStageCaller)
         //    because a top-level class cannot reference its own nested interfaces by simple name
         //    in the 'implements' clause.
-        final TypeSpec callerAsTopLevel = asTopLevelClass(callerClass, packageName);
+        final TypeSpec callerAsTopLevel = asTopLevelClass(callerClass);
 
         final JavaFile javaFile = JavaFile.builder(packageName, callerAsTopLevel)
                 .skipJavaLangImports(true)
@@ -76,16 +76,10 @@ public class JavaPoetGenerator {
 
     /**
      * Converts a nested-class {@link TypeSpec} (with {@code public static final} modifiers) into
-     * a top-level class suitable for writing via the {@link Filer}:
-     * <ol>
-     *   <li>Removes the {@code static} modifier (not valid for top-level classes).</li>
-     * </ol>
-     *
-     * <p>Note: the Caller_Class no longer implements its own nested stage interface in the
-     * {@code implements} clause (which would cause a cyclic inheritance error in Java). Instead,
-     * the Caller_Class exposes the first stage method directly as a regular public method.
+     * a top-level class suitable for writing via the {@link Filer} by removing the {@code static}
+     * modifier (not valid for top-level classes).
      */
-    private static TypeSpec asTopLevelClass(final TypeSpec typeSpec, final String packageName) {
+    private static TypeSpec asTopLevelClass(final TypeSpec typeSpec) {
         final TypeSpec.Builder builder = typeSpec.toBuilder();
         builder.modifiers.remove(javax.lang.model.element.Modifier.STATIC);
         return builder.build();
@@ -99,11 +93,5 @@ public class JavaPoetGenerator {
         final String dotName = binaryName.replace('/', '.');
         final int lastDot = dotName.lastIndexOf('.');
         return lastDot < 0 ? "" : dotName.substring(0, lastDot);
-    }
-
-    private static String resolveSimpleName(final String binaryName) {
-        final String dotName = binaryName.replace('/', '.');
-        final int lastDot = dotName.lastIndexOf('.');
-        return lastDot < 0 ? dotName : dotName.substring(lastDot + 1);
     }
 }

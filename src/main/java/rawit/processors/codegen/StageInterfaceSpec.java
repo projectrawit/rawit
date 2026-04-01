@@ -256,18 +256,7 @@ public class StageInterfaceSpec {
         final TypeSpec.Builder builder = TypeSpec.interfaceBuilder(ifaceName)
                 .addModifiers(Modifier.PUBLIC);
 
-        // Add the terminal method (invoke() or construct())
-        final String terminalMethodName = isCurry ? "invoke" : "construct";
-        final TypeName terminalReturnType;
-        if (isCurry) {
-            // For @Curry, the return type is the representative method's return type
-            // We use void as a placeholder — the actual return type is set by TerminalInterfaceSpec
-            terminalReturnType = com.squareup.javapoet.TypeName.VOID;
-        } else {
-            terminalReturnType = com.squareup.javapoet.TypeName.VOID;
-        }
-        // Actually, we need to get the return type from the representative method
-        // For simplicity, we'll use the terminal interface as a superinterface
+        // Model the combined interface by extending the terminal interface
         builder.addSuperinterface(terminalTypeName());
 
         // Add the continuation's stage methods

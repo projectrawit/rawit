@@ -11,9 +11,11 @@ import java.net.URI;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Property-based tests for {@link ElementValidator} validation rules.
@@ -60,6 +62,7 @@ class ElementValidatorPropertyTest {
 
     private List<Diagnostic<? extends JavaFileObject>> compile(String className, String source) {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+        assertNotNull(compiler, "getSystemJavaCompiler() returned null — tests must run on a JDK, not a JRE");
         DiagnosticCollector<JavaFileObject> collector = new DiagnosticCollector<>();
         StandardJavaFileManager fm = compiler.getStandardFileManager(collector, Locale.ROOT, null);
 
@@ -84,7 +87,12 @@ class ElementValidatorPropertyTest {
     }
 
     private long countErrors(List<Diagnostic<? extends JavaFileObject>> diags) {
-        return diags.stream().filter(d -> d.getKind() == Diagnostic.Kind.ERROR).count();
+        return diags.stream()
+                .filter(d -> d.getKind() == Diagnostic.Kind.ERROR)
+                // Exclude the .class-not-found error — it fires in -proc:only mode (no .class produced)
+                // and is a pipeline concern, not a validation concern.
+                .filter(d -> !d.getMessage(Locale.ROOT).contains(".class file not found"))
+                .count();
     }
 
     private String uniqueClassName(String prefix) {
@@ -144,7 +152,7 @@ class ElementValidatorPropertyTest {
                 import rawit.Curry;
                 public class %s {
                     @Curry
-                    %sint method_%s(%s) { return; }
+                    %sint method_%s(%s) { return 0; }
                 }
                 """.formatted(className, visibilityPrefix, methodName, params);
 

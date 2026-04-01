@@ -101,9 +101,9 @@ public void sendEmail(String to, String subject, String body) { ... }
 ```
 
 The processor injects:
-- A parameterless overload `sendEmail()` on the enclosing class
-- An inner class `SendEmail` implementing all stage interfaces
-- Stage interfaces `ToStageCaller`, `SubjectStageCaller`, `BodyStageCaller`, and `InvokeStageCaller`
+- A parameterless overload `sendEmail()` on the enclosing class returning the caller type
+- A top-level caller class `SendEmail` generated in the same package as the enclosing class
+- Nested stage interfaces on `SendEmail`: `ToStageCaller`, `SubjectStageCaller`, `BodyStageCaller`, and `InvokeStageCaller`
 
 ```java
 mailer.sendEmail()
@@ -124,7 +124,7 @@ public User(int id, String name) { ... }
 
 The processor injects:
 - A `public static constructor()` method on the enclosing class
-- An inner class `Constructor` implementing all stage interfaces
+- A generated `Constructor` class in the same package implementing all stage interfaces
 - Stage interfaces `IdStageConstructor`, `NameStageConstructor`, and `ConstructStageCaller`
 
 ```java
