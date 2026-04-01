@@ -143,6 +143,8 @@ class ElementValidatorPropertyTest {
             @ForAll("validVisibilities") String visibility) {
         // Feature: curry-to-invoker-rename, Property 1: Valid @Invoker element produces no errors
         // Validates: Requirements 1.3, 2.3
+
+        String className = uniqueClassName("ValidInvokerMethod");
         String visibilityPrefix = visibility.isEmpty() ? "" : visibility + " ";
         String params = buildParams(paramTypes);
 
@@ -168,6 +170,8 @@ class ElementValidatorPropertyTest {
             @ForAll("validVisibilities") String visibility) {
         // Feature: curry-to-invoker-rename, Property 1: Valid @Invoker element produces no errors
         // Validates: Requirements 2.3
+
+        String className = uniqueClassName("ValidInvokerCtor");
         String visibilityPrefix = visibility.isEmpty() ? "" : visibility + " ";
         String params = buildParams(paramTypes);
 
@@ -193,6 +197,8 @@ class ElementValidatorPropertyTest {
             @ForAll("validVisibilities") String visibility) {
         // Feature: curry-to-invoker-rename, Property 1: Valid @Invoker element produces no errors
         // Validates: Requirements 15.4
+
+        String className = uniqueClassName("ValidConstructorAnnotation");
         String visibilityPrefix = visibility.isEmpty() ? "" : visibility + " ";
         String params = buildParams(paramTypes);
 
