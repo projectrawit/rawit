@@ -198,7 +198,7 @@ class RawitAnnotationProcessorConstructorPropertyTest {
 
     // =========================================================================
     // Property 25: constructor() entry point is public static
-    // Feature: project-rawit-curry, Property 25: constructor() entry point is public static
+    // Feature: curry-to-invoker-rename, Property 25: constructor() entry point is public static
     // =========================================================================
 
     /**
@@ -211,7 +211,7 @@ class RawitAnnotationProcessorConstructorPropertyTest {
     void property25_constructorEntryPointIsPublicStatic(
             @ForAll("paramCount") int n
     ) throws Exception {
-        // Feature: project-rawit-curry, Property 25: constructor() entry point is public static
+        // Feature: curry-to-invoker-rename, Property 25: constructor() entry point is public static
         final String className = "CtorEntry_" + n + "_" + Long.toHexString(System.nanoTime() & 0xFFFFFFFFL);
         final String source = buildConstructorSource(className, n);
 
@@ -242,7 +242,7 @@ class RawitAnnotationProcessorConstructorPropertyTest {
 
     // =========================================================================
     // Property 26: Constructor_Caller_Class is injected as a public static inner class named Constructor
-    // Feature: project-rawit-curry, Property 26: Constructor_Caller_Class is injected as a public static inner class named Constructor
+    // Feature: curry-to-invoker-rename, Property 26: Constructor_Caller_Class is injected as a public static inner class named Constructor
     // =========================================================================
 
     /**
@@ -255,7 +255,7 @@ class RawitAnnotationProcessorConstructorPropertyTest {
     void property26_constructorCallerClassIsPublic(
             @ForAll("paramCount") int n
     ) throws Exception {
-        // Feature: project-rawit-curry, Property 26: Constructor_Caller_Class is injected as a public static inner class named Constructor
+        // Feature: curry-to-invoker-rename, Property 26: Constructor_Caller_Class is injected as a public static inner class named Constructor
         final String className = "CtorCaller_" + n + "_" + Long.toHexString(System.nanoTime() & 0xFFFFFFFFL);
         final String source = buildConstructorSource(className, n);
 
@@ -275,7 +275,7 @@ class RawitAnnotationProcessorConstructorPropertyTest {
 
     // =========================================================================
     // Property 27: ConstructStageCaller has a construct() method returning the enclosing type
-    // Feature: project-rawit-curry, Property 27: ConstructStageCaller has a construct() method returning the enclosing type
+    // Feature: curry-to-invoker-rename, Property 27: ConstructStageCaller has a construct() method returning the enclosing type
     // =========================================================================
 
     /**
@@ -289,7 +289,7 @@ class RawitAnnotationProcessorConstructorPropertyTest {
     void property27_constructStageCallerHasConstructMethod(
             @ForAll("paramCount") int n
     ) throws Exception {
-        // Feature: project-rawit-curry, Property 27: ConstructStageCaller has a construct() method returning the enclosing type
+        // Feature: curry-to-invoker-rename, Property 27: ConstructStageCaller has a construct() method returning the enclosing type
         final String className = "CtorConstruct_" + n + "_" + Long.toHexString(System.nanoTime() & 0xFFFFFFFFL);
         final String source = buildConstructorSource(className, n);
 
