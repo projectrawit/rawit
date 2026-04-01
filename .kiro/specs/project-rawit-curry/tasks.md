@@ -30,11 +30,11 @@ together.
     - Return a `ValidationResult` (sealed interface: `Valid` / `Invalid`) carrying the `Messager` diagnostics
     - Emit exactly one `ERROR` per violated rule referencing the offending element
     - _Requirements: 1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 3.7, 13.1, 15.1, 15.2, 15.3, 15.4_
-  - [ ]* 2.2 Write unit tests for `ElementValidator`
+  - [x] 2.2 Write unit tests for `ElementValidator`
     - One test per validation rule: zero params, private, wrong element kind, conflict
     - Use mock `Element` / `Messager` or compile small source snippets via `javax.tools.JavaCompiler`
     - _Requirements: 1.1, 1.2, 2.1, 2.2, 15.1, 15.2, 15.3_
-  - [ ]* 2.3 Write property test for `ElementValidator` — Property 1 and Property 20
+  - [x] 2.3 Write property test for `ElementValidator` — Property 1 and Property 20
     - **Property 1: Valid element produces no errors**
     - **Property 20: Exactly one error per violated validation rule**
     - **Validates: Requirements 1.3, 2.3, 10.2, 15.4**
