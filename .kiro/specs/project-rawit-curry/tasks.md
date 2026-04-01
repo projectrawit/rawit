@@ -57,25 +57,25 @@ together.
     - `MergeTree`: wraps the root `MergeNode` plus the `OverloadGroup` metadata
     - _Requirements: 11, 12, 14_
 
-- [ ] 4. Implement `MergeTreeBuilder`
-  - [ ] 4.1 Create `processors/merge/MergeTreeBuilder.java`
+- [x] 4. Implement `MergeTreeBuilder`
+  - [x] 4.1 Create `processors/merge/MergeTreeBuilder.java`
     - Implement Algorithm 1 from the design: `buildNode(overloads, position)` recursively
     - Partition into terminals vs continuations at each position
     - Group continuations by `(name, type)` — single group → `SharedNode`, multiple → `BranchingNode`
     - Detect same-name-different-type conflict and emit `ERROR` via `Messager`; return `null` on conflict
     - _Requirements: 11.1, 11.3, 11.4, 12.1, 14.1, 14.2, 14.4, 14.5, 22.1, 22.4, 22.5_
-  - [ ]* 4.2 Write unit tests for `MergeTreeBuilder`
+  - [x] 4.2 Write unit tests for `MergeTreeBuilder`
     - Test: single overload, shared prefix, branching at first param, branching at second param,
       prefix overload (shorter is prefix of longer), same-name-different-type conflict
     - _Requirements: 11.1, 11.3, 11.4, 12.1, 14.1_
-  - [ ]* 4.3 Write property test for `MergeTreeBuilder` — Properties 21, 22, 23, 24
+  - [x] 4.3 Write property test for `MergeTreeBuilder` — Properties 21, 22, 23, 24
     - **Property 21: Shared prefix is correctly computed for overload groups**
     - **Property 22: Single parameterless overload for an overload group**
     - **Property 23: Branching stage is generated at divergence points**
     - **Property 24: Prefix overload stage exposes both terminal and continuation**
     - **Validates: Requirements 11.1, 11.2, 11.3, 11.4, 12.1, 12.2, 12.3, 14.4, 20.2, 20.4, 20.5, 20.6**
 
-- [ ] 5. Checkpoint — Ensure all tests pass
+- [~] 5. Checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 6. Implement JavaPoet code generation (`codegen` package)
