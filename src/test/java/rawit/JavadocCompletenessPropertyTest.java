@@ -15,14 +15,12 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Verifies that every public constructor and public non-void method in
- * {@code src/main/java/rawit/} has complete Javadoc, and that no broken
- * {@code {@link}} references appear in the source.
+ * Verifies that every public constructor in {@code src/main/java/rawit/}
+ * has Javadoc, that every public non-void method with Javadoc includes an
+ * {@code @return} tag, and that no broken {@code {@link}} references appear
+ * in the source.
  *
  * <p><b>Validates: Requirements 1.2–1.13</b>
- *
- * <p><b>NOTE</b>: This test is expected to FAIL on unfixed code — failure confirms the bug exists.
- * It will pass once all 13 affected files have been fixed.
  */
 class JavadocCompletenessPropertyTest {
 

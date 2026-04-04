@@ -25,6 +25,10 @@ class PomCoordinatesTest {
     static void parsePom() throws Exception {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         factory.setNamespaceAware(false);
+        factory.setFeature("http://javax.xml.XMLConstants/feature/secure-processing", true);
+        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+        factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+        factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
         DocumentBuilder builder = factory.newDocumentBuilder();
         pom = builder.parse(new File("pom.xml"));
         pom.getDocumentElement().normalize();

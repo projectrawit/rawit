@@ -13,7 +13,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Property-based test verifying that every .java source file has a package declaration
- * consistent with its directory path, and that no file resides under a legacy rg/rawit path.
+ * consistent with its directory path, that no file resides under a legacy rg/rawit path,
+ * and that no file uses the default (unnamed) package.
  *
  * <p><b>Validates: Requirements 6.1, 6.2, 6.3</b>
  *
@@ -76,10 +77,11 @@ class SourceFilePackageConsistencyTest {
                 .findFirst()
                 .orElse(null);
 
-        // Files in the default package (no package declaration) are skipped
-        if (packageDeclaration == null) {
-            return;
-        }
+        // All source files under src/main/java or src/test/java must have a package declaration
+        assertNotNull(
+                packageDeclaration,
+                "File has no package declaration (default package not allowed): " + javaFile
+        );
 
         // Extract package name: "package rawit.processors.model;" -> "rawit.processors.model"
         String packageName = packageDeclaration
