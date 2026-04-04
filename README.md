@@ -128,10 +128,16 @@ Foo foo = new Foo();
 int result = foo.add().x(3).y(4).invoke(); // == 7
 
 // Static method
-String msg = Foo.greet().name("Alice").greeting("Hello").invoke(); // == "Hello, Alice!"
+String msg = Foo.greet()
+                .name("Alice")
+                .greeting("Hello")
+                .invoke(); // == "Hello, Alice!"
 
 // Constructor
-Point p = Point.constructor().x(1).y(2).construct(); // == new Point(1, 2)
+Point p = Point.constructor()
+               .x(1)
+               .y(2)
+               .construct(); // == new Point(1, 2)
 ```
 
 ---
@@ -175,7 +181,10 @@ The processor injects:
 - Stage interfaces `IdStageConstructor`, `NameStageConstructor`, and `ConstructStageInvoker`
 
 ```java
-User user = User.constructor().id(42).name("Alice").construct();
+User user = User.constructor()
+                .id(42)
+                .name("Alice")
+                .construct();
 ```
 
 ---
