@@ -98,6 +98,8 @@ public class StageInterfaceSpec {
                 buildInterfaces(terminal.continuation(), prevParamName, position, out);
             }
             // Terminal itself is handled by TerminalInterfaceSpec — no stage interface here
+        } else {
+            throw new IllegalStateException("Unexpected merge node: " + node);
         }
     }
 
@@ -280,8 +282,11 @@ public class StageInterfaceSpec {
                 final TypeName returnType = nextTypeName(branch.next(), branch.paramName(), position + 1);
                 builder.addMethod(buildStageMethod(branch.paramName(), branch.typeDescriptor(), returnType));
             }
-        } else if (continuation instanceof TerminalNode terminal) {
-            // Nested terminal — shouldn't happen in practice
+        } else if (continuation instanceof TerminalNode) {
+            throw new IllegalStateException(
+                    "Unexpected terminal continuation while building combined interface '"
+                            + ifaceName + "' for previous parameter '" + prevParamName
+                            + "' at position " + position);
         }
 
         return builder.build();

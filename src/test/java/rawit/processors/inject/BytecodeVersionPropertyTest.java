@@ -180,6 +180,7 @@ class BytecodeVersionPropertyTest {
             final StringWriter sw = new StringWriter();
             final PrintWriter pw = new PrintWriter(sw);
             CheckClassAdapter.verify(new ClassReader(resultBytes), false, pw);
+            pw.flush();
             final String verifyOutput = sw.toString();
 
             assertTrue(verifyOutput.isEmpty(),
@@ -302,11 +303,18 @@ class BytecodeVersionPropertyTest {
     }
 
     private static void deleteDir(final Path dir) {
-        try {
-            if (Files.exists(dir)) {
-                Files.walk(dir).sorted(Comparator.reverseOrder())
-                        .forEach(p -> { try { Files.deleteIfExists(p); } catch (IOException ignored) {} });
-            }
-        } catch (final IOException ignored) {}
+        if (!Files.exists(dir)) return;
+        try (Stream<Path> paths = Files.walk(dir)) {
+            paths.sorted(Comparator.reverseOrder())
+                    .forEach(p -> {
+                        try {
+                            Files.deleteIfExists(p);
+                        } catch (final IOException e) {
+                            throw new UncheckedIOException("Failed to delete path: " + p, e);
+                        }
+                    });
+        } catch (final IOException e) {
+            throw new UncheckedIOException("Failed to walk directory: " + dir, e);
+        }
     }
 }

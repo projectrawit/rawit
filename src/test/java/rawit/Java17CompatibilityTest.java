@@ -80,9 +80,12 @@ class Java17CompatibilityTest {
     @Test
     void readmeDoesNotContainJava21AsMinimumRequirement() {
         // "Java 21" must not appear as a minimum requirement.
-        // We check that the README does not contain "Java 21" at all,
-        // since any such reference would imply it as a minimum.
-        assertFalse(readmeContent.contains("Java 21"),
-                "README.md must not contain 'Java 21' as a minimum requirement");
+        // We check the specific phrases used to state the minimum version requirement,
+        // rather than banning "Java 21" globally (which would break if the README ever
+        // mentions Java 21 in a different context, e.g. supported range or examples).
+        assertFalse(readmeContent.contains("Java 21 annotation processor"),
+                "README.md must not state 'Java 21 annotation processor'");
+        assertFalse(readmeContent.contains("Requires **Java 21**"),
+                "README.md must not state 'Requires **Java 21**' as a minimum requirement");
     }
 }
