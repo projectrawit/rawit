@@ -9,7 +9,7 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Validates: Requirements 4.1, 4.2, 4.3, 4.4, 5.1, 5.2, 5.3, 5.4, 6.5
+ * Validates: Requirements 4.1, 4.2, 4.3, 4.4, 5.1, 5.2, 5.3, 5.4, 6.5, 7.1, 7.2, 7.3, 7.4
  */
 class ReadmeSnippetsTest {
 
@@ -83,5 +83,29 @@ class ReadmeSnippetsTest {
     void readmeContainsImportRawitConstructor() {
         assertTrue(README.contains("import rawit.Constructor"),
                 "README.md should contain 'import rawit.Constructor'");
+    }
+
+    @Test
+    void readmeContainsGradleGroovyTwoPassProcNone() {
+        assertTrue(README.contains("options.compilerArgs += ['-proc:none']"),
+                "README.md should contain Gradle Groovy DSL -proc:none compiler argument");
+    }
+
+    @Test
+    void readmeContainsGradleGroovyTwoPassProcessAnnotationsTask() {
+        assertTrue(README.contains("tasks.register('processAnnotations', JavaCompile)"),
+                "README.md should contain Gradle Groovy DSL processAnnotations task registration");
+    }
+
+    @Test
+    void readmeContainsGradleKotlinTwoPassProcNone() {
+        assertTrue(README.contains("options.compilerArgs.add(\"-proc:none\")"),
+                "README.md should contain Gradle Kotlin DSL -proc:none compiler argument");
+    }
+
+    @Test
+    void readmeContainsGradleKotlinTwoPassProcessAnnotationsTask() {
+        assertTrue(README.contains("tasks.register<JavaCompile>(\"processAnnotations\")"),
+                "README.md should contain Gradle Kotlin DSL processAnnotations task registration");
     }
 }

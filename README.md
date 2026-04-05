@@ -66,30 +66,76 @@ dependencies {
 
 > **Build requirement:** Rawit injects generated entry points into existing `.class` files, which
 > means the declaring class must be compiled *before* annotation processing runs. In a standard
-> single-pass `javac`/Maven compile, annotation processing runs before `.class` files are written,
-> so injection is skipped silently on the first pass. To enable injection, configure a **two-pass
-> compile** in your `pom.xml`:
->
-> ```xml
-> <!-- Pass 1: compile sources without annotation processing -->
-> <plugin>
->   <groupId>org.apache.maven.plugins</groupId>
->   <artifactId>maven-compiler-plugin</artifactId>
->   <executions>
->     <execution>
->       <id>default-compile</id>
->       <configuration><compilerArgument>-proc:none</compilerArgument></configuration>
->     </execution>
->     <!-- Pass 2: run annotation processing only (classes already exist) -->
->     <execution>
->       <id>process-annotations</id>
->       <phase>process-classes</phase>
->       <goals><goal>compile</goal></goals>
->       <configuration><compilerArgument>-proc:only</compilerArgument></configuration>
->     </execution>
->   </executions>
-> </plugin>
-> ```
+> single-pass `javac`/Maven/Gradle compile, annotation processing runs before `.class` files are
+> written, so injection is skipped silently on the first pass. To enable injection, configure a
+> **two-pass compile** as shown below.
+
+#### Maven two-pass compile
+
+```xml
+<!-- Pass 1: compile sources without annotation processing -->
+<plugin>
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-compiler-plugin</artifactId>
+  <executions>
+    <execution>
+      <id>default-compile</id>
+      <configuration><compilerArgument>-proc:none</compilerArgument></configuration>
+    </execution>
+    <!-- Pass 2: run annotation processing only (classes already exist) -->
+    <execution>
+      <id>process-annotations</id>
+      <phase>process-classes</phase>
+      <goals><goal>compile</goal></goals>
+      <configuration><compilerArgument>-proc:only</compilerArgument></configuration>
+    </execution>
+  </executions>
+</plugin>
+```
+
+#### Gradle Groovy DSL two-pass compile
+
+```groovy
+// Pass 1: compile sources without annotation processing
+compileJava {
+    options.compilerArgs += ['-proc:none']
+}
+
+// Pass 2: run annotation processing only (classes already exist)
+tasks.register('processAnnotations', JavaCompile) {
+    source = sourceSets.main.java
+    classpath = sourceSets.main.compileClasspath
+    destinationDirectory = sourceSets.main.output.classesDirs.singleFile
+    options.annotationProcessorPath = configurations.annotationProcessor
+    options.compilerArgs = ['-proc:only', '-classpath', sourceSets.main.output.classesDirs.singleFile.absolutePath]
+    dependsOn compileJava
+}
+
+classes.dependsOn processAnnotations
+```
+
+#### Gradle Kotlin DSL two-pass compile
+
+```kotlin
+// Pass 1: compile sources without annotation processing
+tasks.named<JavaCompile>("compileJava") {
+    options.compilerArgs.add("-proc:none")
+}
+
+// Pass 2: run annotation processing only (classes already exist)
+tasks.register<JavaCompile>("processAnnotations") {
+    source(sourceSets.main.get().java)
+    classpath = sourceSets.main.get().compileClasspath
+    destinationDirectory.set(sourceSets.main.get().output.classesDirs.singleFile)
+    options.annotationProcessorPath = configurations["annotationProcessor"]
+    options.compilerArgs = listOf("-proc:only", "-classpath", sourceSets.main.get().output.classesDirs.singleFile.absolutePath)
+    dependsOn("compileJava")
+}
+
+tasks.named("classes") {
+    dependsOn("processAnnotations")
+}
+```
 
 ```java
 import rawit.Invoker;
