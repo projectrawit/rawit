@@ -1,0 +1,37 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.example'
+version = '1.0-SNAPSHOT'
+sourceCompatibility = '17'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    annotationProcessor 'io.github.ronnygunawan:rawit:0.0.3'
+    compileOnly 'io.github.ronnygunawan:rawit:0.0.3'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+}
+
+compileJava {
+    options.compilerArgs += ['-proc:none']
+}
+
+task processAnnotations(type: JavaCompile) {
+    source = sourceSets.main.java
+    classpath = sourceSets.main.compileClasspath
+    destinationDirectory = sourceSets.main.java.classesDirectory
+    options.compilerArgs += ['-proc:only']
+    options.annotationProcessorPath = configurations.annotationProcessor
+    dependsOn compileJava
+}
+
+classes.dependsOn processAnnotations
+
+test {
+    useJUnitPlatform()
+}
