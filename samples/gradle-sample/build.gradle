@@ -12,8 +12,8 @@ repositories {
 }
 
 dependencies {
-    annotationProcessor 'io.github.ronnygunawan:rawit:1.0-SNAPSHOT'
-    compileOnly 'io.github.ronnygunawan:rawit:1.0-SNAPSHOT'
+    annotationProcessor 'io.github.ronnygunawan:rawit:0.0.6'
+    compileOnly 'io.github.ronnygunawan:rawit:0.0.6'
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
 }
@@ -37,6 +37,7 @@ task reinjectBytecode(type: JavaCompile) {
     options.compilerArgs += ['-proc:only']
     options.annotationProcessorPath = configurations.annotationProcessor
     options.incremental = false
+    outputs.upToDateWhen { false }
     dependsOn processAnnotations
 }
 
