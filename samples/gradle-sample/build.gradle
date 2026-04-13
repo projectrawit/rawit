@@ -12,8 +12,8 @@ repositories {
 }
 
 dependencies {
-    annotationProcessor 'io.github.ronnygunawan:rawit:0.0.7'
-    compileOnly 'io.github.ronnygunawan:rawit:0.0.7'
+    annotationProcessor 'io.github.ronnygunawan:rawit:1.0-SNAPSHOT'
+    compileOnly 'io.github.ronnygunawan:rawit:1.0-SNAPSHOT'
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
 }

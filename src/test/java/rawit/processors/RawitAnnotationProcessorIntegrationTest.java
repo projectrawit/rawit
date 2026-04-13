@@ -785,6 +785,12 @@ class RawitAnnotationProcessorIntegrationTest {
             final Object result = invoke(invokeStage, "invoke");
 
             assertEquals(7, result, "single-pass: add().x(3).y(4).invoke() must equal 7");
+
+            // Round-trip equivalence with direct invocation
+            final int direct = (int) cls.getMethod("add", int.class, int.class)
+                    .invoke(obj, 3, 4);
+            assertEquals(direct, result,
+                    "single-pass: chain result must equal direct invocation");
         }
     }
 
@@ -809,6 +815,12 @@ class RawitAnnotationProcessorIntegrationTest {
             final Object result = invoke(invokeStage, "invoke");
 
             assertEquals(11, result, "single-pass: static add().x(5).y(6).invoke() must equal 11");
+
+            // Round-trip equivalence with direct static invocation
+            final int direct = (int) cls.getMethod("add", int.class, int.class)
+                    .invoke(null, 5, 6);
+            assertEquals(direct, result,
+                    "single-pass: chain result must equal direct static invocation");
         }
     }
 
