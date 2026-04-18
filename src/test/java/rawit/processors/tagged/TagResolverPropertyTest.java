@@ -105,8 +105,7 @@ class TagResolverPropertyTest {
     void property2_tagResolutionRecognizesTagsOnAllSupportedElementKinds(
             @ForAll("elementKinds") ElementKind kind,
             @ForAll("tagMaps") Map<String, TagInfo> tagMap,
-            @ForAll boolean hasTag,
-            @ForAll("strictValues") boolean strict
+            @ForAll boolean hasTag
     ) {
         // Pick a tag from the map if hasTag is true
         TagInfo expectedTag = null;
