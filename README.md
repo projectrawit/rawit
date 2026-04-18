@@ -23,6 +23,7 @@ foo.bar().x(10).y(20).invoke();
 - **`@Invoker`** — turns any non-private method (instance or static) into a staged call chain ending with `.invoke()`
 - **`@Constructor`** — injects a `public static constructor()` entry point for staged object construction ending with `.construct()`. Works on explicit constructors and directly on **record types**
 - **`@Getter`** — generates public getter methods for annotated fields. Follows the Lombok `is`-prefix convention for primitive `boolean`, supports static fields, and handles field hiding with covariant return types
+- **`@TaggedValue`** — meta-annotation for compile-time value type safety. Define your own tag annotations (e.g., `@UserId`, `@FirstName`) and get compiler warnings for unsafe assignments between mismatched or untagged values. Supports strict and lax modes, literal exemptions, and integrates with generated builder chains
 - Works on **instance methods** and **static methods** (`@Invoker`), **constructors**, and **record type declarations** (`@Constructor`)
 - Supports **overload groups** — multiple overloads with the same name share a single entry point and branch only where their signatures diverge
 - **Zero runtime dependency** — the processor runs at compile time only
@@ -248,6 +249,77 @@ public class Derived extends Base {
     @Getter protected Integer value; // covariant override — OK
 }
 ```
+
+### `@TaggedValue`
+
+A meta-annotation for lightweight, compile-time value type safety without wrapper types. Annotate your own annotation declarations with `@TaggedValue` to create tag annotations, then apply those tags to fields, parameters, local variables, and record components. The analyzer emits compiler warnings for unsafe assignments between tagged and untagged values.
+
+#### Defining tag annotations
+
+```java
+import rawit.TaggedValue;
+
+@TaggedValue(strict = true)   // strict: warns on tagged↔untagged assignments
+public @interface UserId { }
+
+@TaggedValue                   // lax (default): only warns on tag mismatches
+public @interface FirstName { }
+
+@TaggedValue
+public @interface LastName { }
+```
+
+#### Using tag annotations
+
+```java
+@UserId long taggedId = 42;              // OK — literals are always exempt
+long rawId = getUserId();
+@UserId long taggedId2 = rawId;          // WARNING: untagged → strict tagged
+
+@FirstName String first = "John";
+@LastName String last = first;           // WARNING: tag mismatch (@FirstName → @LastName)
+
+String rawName = "John";
+@FirstName String name = rawName;        // OK — lax mode, no warning
+
+@FirstName String name1 = getFirst();
+@FirstName String name2 = name1;         // OK — same tag, no warning
+```
+
+#### Strict vs. lax mode
+
+| Source | Target | Literal? | Strict? | Warning? |
+|---|---|---|---|---|
+| Untagged | Untagged | — | — | No |
+| Tagged(A) | Tagged(A) | — | — | No (same tag) |
+| Tagged(A) | Tagged(B) | — | — | Yes: tag mismatch |
+| Untagged | Tagged(A) | Yes | — | No (literal exempt) |
+| Untagged | Tagged(A) | No | `true` | Yes |
+| Untagged | Tagged(A) | No | `false` | No (lax) |
+| Tagged(A) | Untagged | — | `true` | Yes |
+| Tagged(A) | Untagged | — | `false` | No (lax) |
+
+#### Integration with `@Constructor` and `@Invoker`
+
+Tag annotations on constructor/method parameters are propagated onto the generated stage method parameters. The analyzer checks tag safety at builder chain call sites:
+
+```java
+@Constructor
+public record TaggedUser(
+    @UserId long userId,
+    @FirstName String firstName,
+    @LastName String lastName
+) { }
+
+@FirstName String name = "John";
+TaggedUser user = TaggedUser.constructor()
+    .userId(10)            // OK — literal exempt
+    .firstName(name)       // OK — @FirstName → @FirstName
+    .lastName(name)        // WARNING: tag mismatch (@FirstName → @LastName)
+    .construct();
+```
+
+All warnings use `Diagnostic.Kind.WARNING` — compilation always succeeds. No runtime overhead; the analyzer operates entirely at compile time.
 
 ---
 
