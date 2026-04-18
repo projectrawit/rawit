@@ -14,9 +14,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.github.ronnygunawan</groupId>
+            <groupId>io.github.projectrawit</groupId>
             <artifactId>rawit</artifactId>
-            <version>0.0.8</version>
+            <version>1.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>

@@ -3,7 +3,7 @@
 ## Introduction
 
 This feature covers the changes needed to publish the Rawit annotation processor to Maven Central
-under the verified namespace `io.github.ronnygunawan`. It includes correcting the `groupId` and
+under the verified namespace `io.github.projectrawit`. It includes correcting the `groupId` and
 `artifactId` in `pom.xml`, fixing the project description, ensuring all Maven Central
 publishing configuration is correct, and updating the README installation instructions to reflect
 the new coordinates for both Maven and Gradle users.
@@ -11,7 +11,7 @@ the new coordinates for both Maven and Gradle users.
 ## Glossary
 
 - **POM**: The `pom.xml` Project Object Model file that defines Maven build configuration.
-- **groupId**: The Maven coordinate component identifying the namespace owner (`io.github.ronnygunawan`).
+- **groupId**: The Maven coordinate component identifying the namespace owner (`io.github.projectrawit`).
 - **artifactId**: The Maven coordinate component identifying the artifact (`rawit`).
 - **Maven_Central**: The public Maven repository at `repo1.maven.org` managed via Sonatype Central Portal.
 - **README**: The `README.md` file at the repository root containing user-facing documentation.
@@ -28,7 +28,7 @@ Maven Central namespace, so that the artifact can be published and resolved corr
 
 #### Acceptance Criteria
 
-1. THE POM SHALL declare `<groupId>io.github.ronnygunawan</groupId>`.
+1. THE POM SHALL declare `<groupId>io.github.projectrawit</groupId>`.
 2. THE POM SHALL declare `<artifactId>rawit</artifactId>`.
 3. THE POM SHALL declare a `<version>` that does not end with `-SNAPSHOT` at the time of release.
 
@@ -62,7 +62,7 @@ so that I can add Rawit to my project without guessing the right groupId or arti
 
 #### Acceptance Criteria
 
-1. THE README SHALL contain a Maven `<dependency>` snippet with `<groupId>io.github.ronnygunawan</groupId>`.
+1. THE README SHALL contain a Maven `<dependency>` snippet with `<groupId>io.github.projectrawit</groupId>`.
 2. THE README SHALL contain a Maven `<dependency>` snippet with `<artifactId>rawit</artifactId>`.
 3. THE README SHALL NOT contain any Maven snippet referencing the old `groupId` value `rg.rawit`.
 4. THE README SHALL NOT contain any Maven snippet referencing the old `artifactId` value `rg-rawit`.
@@ -74,8 +74,8 @@ Groovy DSL and Kotlin DSL, so that I can add Rawit to my project without manual 
 
 #### Acceptance Criteria
 
-1. THE README SHALL contain a Groovy DSL Gradle snippet with `annotationProcessor 'io.github.ronnygunawan:rawit:VERSION'`.
-2. THE README SHALL contain a Groovy DSL Gradle snippet with `compileOnly 'io.github.ronnygunawan:rawit:VERSION'`.
-3. THE README SHALL contain a Kotlin DSL Gradle snippet with `annotationProcessor("io.github.ronnygunawan:rawit:VERSION")`.
-4. THE README SHALL contain a Kotlin DSL Gradle snippet with `compileOnly("io.github.ronnygunawan:rawit:VERSION")`.
+1. THE README SHALL contain a Groovy DSL Gradle snippet with `annotationProcessor 'io.github.projectrawit:rawit:VERSION'`.
+2. THE README SHALL contain a Groovy DSL Gradle snippet with `compileOnly 'io.github.projectrawit:rawit:VERSION'`.
+3. THE README SHALL contain a Kotlin DSL Gradle snippet with `annotationProcessor("io.github.projectrawit:rawit:VERSION")`.
+4. THE README SHALL contain a Kotlin DSL Gradle snippet with `compileOnly("io.github.projectrawit:rawit:VERSION")`.
 5. WHEN a `VERSION` placeholder is used in the README Gradle snippets, THE README SHALL display the placeholder in a way that makes it clear the user must substitute the actual release version.

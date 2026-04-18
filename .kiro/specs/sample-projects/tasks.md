@@ -29,7 +29,7 @@ Create two self-contained sample projects under `samples/` demonstrating Rawit c
 - [x] 2. Create Maven sample build configuration
   - [x] 2.1 Create `samples/maven-sample/pom.xml`
     - GroupId/artifactId for the sample project (e.g. `com.example`/`rawit-maven-sample`)
-    - Dependency on `io.github.ronnygunawan:rawit:0.0.3`
+    - Dependency on `io.github.projectrawit:rawit:0.0.3`
     - `maven-compiler-plugin` with two-pass compile: `default-compile` using `-proc:none`, `process-annotations` execution in `process-classes` phase using `-proc:only`
     - Java 17 target via `<release>17</release>`
     - JUnit 5 test dependency (`org.junit.jupiter:junit-jupiter:5.11.4`)

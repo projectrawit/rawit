@@ -2,7 +2,7 @@
 
 ## Overview
 
-This feature adds a `samples/` directory at the repository root containing two self-contained sample projects that demonstrate how to consume the published Rawit annotation processor (`io.github.ronnygunawan:rawit:0.0.3`) from Maven Central. One project uses Maven, the other uses Gradle (Groovy DSL).
+This feature adds a `samples/` directory at the repository root containing two self-contained sample projects that demonstrate how to consume the published Rawit annotation processor (`io.github.projectrawit:rawit:0.0.3`) from Maven Central. One project uses Maven, the other uses Gradle (Groovy DSL).
 
 Both samples share the same application code — a small set of classes that exercise `@Invoker` (instance + static methods) and `@Constructor`, plus JUnit 5 tests that verify the generated fluent API works correctly. The only differences between the two samples are the build files and directory conventions.
 
@@ -62,7 +62,7 @@ flowchart TD
         G2 --> G3["classes depends on processAnnotations"]
         G3 --> G4["test: gradle test"]
     end
-    MC["Maven Central\nio.github.ronnygunawan:rawit:0.0.3"] --> Maven
+    MC["Maven Central\nio.github.projectrawit:rawit:0.0.3"] --> Maven
     MC --> Gradle
 ```
 
@@ -207,7 +207,7 @@ The sample projects do not introduce new data models beyond the two demonstratio
 
 | Artifact | Scope (Maven) | Configuration (Gradle) | Version |
 |---|---|---|---|
-| `io.github.ronnygunawan:rawit` | `compile` | `annotationProcessor` + `compileOnly` | `0.0.3` |
+| `io.github.projectrawit:rawit` | `compile` | `annotationProcessor` + `compileOnly` | `0.0.3` |
 | `org.junit.jupiter:junit-jupiter` | `test` | `testImplementation` | `5.11.4` |
 
 

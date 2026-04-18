@@ -57,7 +57,7 @@ class PomCoordinatesTest {
     // Validates: Requirement 1.1
     @Test
     void groupIdIsCorrect() {
-        assertEquals("io.github.ronnygunawan", topLevelText("groupId"));
+        assertEquals("io.github.projectrawit", topLevelText("groupId"));
     }
 
     // Validates: Requirement 1.2
