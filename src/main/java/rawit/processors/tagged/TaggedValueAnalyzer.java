@@ -352,11 +352,9 @@ public final class TaggedValueAnalyzer {
                         final String fqn = typeElement.getQualifiedName().toString();
                         TagInfo info = tagMap.get(fqn);
                         if (info == null) {
-                            // Lazy discovery via TagResolver's mechanism
-                            final TagResolution resolved = tagResolver.resolve(typeElement, tagMap, messager);
-                            if (resolved instanceof TagResolution.Tagged tagged) {
-                                info = tagged.tag();
-                            }
+                            // Lazy discovery: check if this annotation type
+                            // is meta-annotated with @TaggedValue
+                            info = TagResolver.lazyDiscover(typeElement, tagMap);
                         }
                         if (info != null) {
                             if (firstTag != null) {

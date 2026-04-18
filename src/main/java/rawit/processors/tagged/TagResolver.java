@@ -89,11 +89,14 @@ public final class TagResolver {
      * Checks if an annotation type is meta-annotated with {@code @TaggedValue}.
      * If so, creates a {@link TagInfo} and adds it to the tag map for future lookups.
      *
+     * <p>This method is also used by {@code TaggedValueAnalyzer} to discover tags
+     * on return type annotations that aren't yet in the tag map.
+     *
      * @param annotationType the annotation type element to check
      * @param tagMap         the tag map to update if a tag is discovered
      * @return the discovered {@link TagInfo}, or {@code null} if not a tag annotation
      */
-    private static TagInfo lazyDiscover(
+    public static TagInfo lazyDiscover(
             final TypeElement annotationType,
             final Map<String, TagInfo> tagMap
     ) {

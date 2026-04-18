@@ -92,18 +92,6 @@ class TagResolverPropertyTest {
 
     /**
      * Generates a list of 0–4 annotation FQNs that are NOT in the given tag map.
-     * These represent non-tag annotations on the element.
-     */
-    private Arbitrary<List<String>> nonTagAnnotationFqns(Map<String, TagInfo> tagMap) {
-        return Arbitraries.of(
-                "javax.annotation.Nonnull",
-                "javax.annotation.Nullable",
-                "java.lang.Override",
-                "java.lang.Deprecated",
-                "java.lang.SuppressWarnings"
-        ).list().ofMinSize(0).ofMaxSize(4);
-    }
-
     // -------------------------------------------------------------------------
     // Property 2: Tag resolution recognizes tags on all supported element kinds
     // Feature: tagged-value-annotation, Property 2: Tag resolution recognizes tags on all supported element kinds

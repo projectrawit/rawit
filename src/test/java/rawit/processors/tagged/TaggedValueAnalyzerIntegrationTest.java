@@ -514,4 +514,131 @@ class TaggedValueAnalyzerIntegrationTest {
         assertTrue(warnings.stream().anyMatch(w -> w.contains("tag mismatch")),
                 "Expected tag mismatch warning for builder stage method parameter, got: " + warnings);
     }
+
+    // =========================================================================
+    // Test 12 — Return statement: strict tagged return type warns on untagged return
+    // Validates: Requirements 5.1
+    // =========================================================================
+
+    @Test
+    void returnStatement_strictTaggedReturnType_warnsOnUntaggedReturn(
+            @TempDir final Path outputDir) throws Exception {
+        final String userIdMethodSource =
+                "package testpkg;\n" +
+                "import rawit.TaggedValue;\n" +
+                "import java.lang.annotation.*;\n" +
+                "@TaggedValue(strict = true)\n" +
+                "@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE, ElementType.METHOD})\n" +
+                "@Retention(RetentionPolicy.CLASS)\n" +
+                "public @interface UserIdMethod { }\n";
+
+        final String usageSource =
+                "package testpkg;\n" +
+                "public class ReturnStrictTest {\n" +
+                "    long getRawId() { return 1L; }\n" +
+                "    @UserIdMethod long getTaggedId() {\n" +
+                "        long rawId = getRawId();\n" +
+                "        return rawId;\n" +
+                "    }\n" +
+                "}\n";
+
+        final List<Diagnostic<? extends JavaFileObject>> diagnostics = compileWithProcessor(
+                List.of("testpkg.UserIdMethod", "testpkg.ReturnStrictTest"),
+                List.of(userIdMethodSource, usageSource),
+                outputDir);
+
+        assertNoErrors(diagnostics);
+        assertAllWarningsNotErrors(diagnostics);
+
+        final List<String> warnings = warningMessages(diagnostics);
+        assertTrue(warnings.stream().anyMatch(w ->
+                        w.contains("untagged") && w.contains("strict")),
+                "Expected strict untagged→tagged warning for return statement, got: " + warnings);
+    }
+
+    // =========================================================================
+    // Test 13 — Return statement: literal exempt from strict tagged return type
+    // Validates: Requirements 3.2
+    // =========================================================================
+
+    @Test
+    void returnStatement_literalToStrictTaggedReturnType_noWarning(
+            @TempDir final Path outputDir) throws Exception {
+        final String userIdMethodSource =
+                "package testpkg;\n" +
+                "import rawit.TaggedValue;\n" +
+                "import java.lang.annotation.*;\n" +
+                "@TaggedValue(strict = true)\n" +
+                "@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE, ElementType.METHOD})\n" +
+                "@Retention(RetentionPolicy.CLASS)\n" +
+                "public @interface UserIdMethod { }\n";
+
+        final String usageSource =
+                "package testpkg;\n" +
+                "public class ReturnLiteralTest {\n" +
+                "    @UserIdMethod long getDefaultId() {\n" +
+                "        return 42L;\n" +
+                "    }\n" +
+                "}\n";
+
+        final List<Diagnostic<? extends JavaFileObject>> diagnostics = compileWithProcessor(
+                List.of("testpkg.UserIdMethod", "testpkg.ReturnLiteralTest"),
+                List.of(userIdMethodSource, usageSource),
+                outputDir);
+
+        assertNoErrors(diagnostics);
+
+        final List<String> warnings = warningMessages(diagnostics);
+        assertTrue(warnings.stream().noneMatch(w ->
+                        w.contains("untagged") && w.contains("UserIdMethod")),
+                "Expected no warning for literal return to strict tagged, got: " + warnings);
+    }
+
+    // =========================================================================
+    // Test 14 — Return statement: tag mismatch on return
+    // Validates: Requirements 7.1
+    // =========================================================================
+
+    @Test
+    void returnStatement_tagMismatch_emitsWarning(
+            @TempDir final Path outputDir) throws Exception {
+        final String firstNameMethodSource =
+                "package testpkg;\n" +
+                "import rawit.TaggedValue;\n" +
+                "import java.lang.annotation.*;\n" +
+                "@TaggedValue\n" +
+                "@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE, ElementType.METHOD})\n" +
+                "@Retention(RetentionPolicy.CLASS)\n" +
+                "public @interface FirstNameMethod { }\n";
+
+        final String lastNameMethodSource =
+                "package testpkg;\n" +
+                "import rawit.TaggedValue;\n" +
+                "import java.lang.annotation.*;\n" +
+                "@TaggedValue\n" +
+                "@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE, ElementType.METHOD})\n" +
+                "@Retention(RetentionPolicy.CLASS)\n" +
+                "public @interface LastNameMethod { }\n";
+
+        final String usageSource =
+                "package testpkg;\n" +
+                "public class ReturnMismatchTest {\n" +
+                "    @LastNameMethod String getLastName() {\n" +
+                "        @FirstNameMethod String first = \"John\";\n" +
+                "        return first;\n" +
+                "    }\n" +
+                "}\n";
+
+        final List<Diagnostic<? extends JavaFileObject>> diagnostics = compileWithProcessor(
+                List.of("testpkg.FirstNameMethod", "testpkg.LastNameMethod", "testpkg.ReturnMismatchTest"),
+                List.of(firstNameMethodSource, lastNameMethodSource, usageSource),
+                outputDir);
+
+        assertNoErrors(diagnostics);
+        assertAllWarningsNotErrors(diagnostics);
+
+        final List<String> warnings = warningMessages(diagnostics);
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("tag mismatch")),
+                "Expected tag mismatch warning for return statement, got: " + warnings);
+    }
 }
