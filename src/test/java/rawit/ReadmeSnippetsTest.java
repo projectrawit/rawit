@@ -25,8 +25,8 @@ class ReadmeSnippetsTest {
 
     @Test
     void readmeContainsMavenGroupId() {
-        assertTrue(README.contains("<groupId>io.github.ronnygunawan</groupId>"),
-                "README.md should contain Maven groupId io.github.ronnygunawan");
+        assertTrue(README.contains("<groupId>io.github.projectrawit</groupId>"),
+                "README.md should contain Maven groupId io.github.projectrawit");
     }
 
     @Test
@@ -51,25 +51,25 @@ class ReadmeSnippetsTest {
 
     @Test
     void readmeContainsGradleGroovyAnnotationProcessor() {
-        assertTrue(README.contains("annotationProcessor 'io.github.ronnygunawan:rawit:"),
+        assertTrue(README.contains("annotationProcessor 'io.github.projectrawit:rawit:"),
                 "README.md should contain Gradle Groovy DSL annotationProcessor snippet");
     }
 
     @Test
     void readmeContainsGradleGroovyCompileOnly() {
-        assertTrue(README.contains("compileOnly 'io.github.ronnygunawan:rawit:"),
+        assertTrue(README.contains("compileOnly 'io.github.projectrawit:rawit:"),
                 "README.md should contain Gradle Groovy DSL compileOnly snippet");
     }
 
     @Test
     void readmeContainsGradleKotlinAnnotationProcessor() {
-        assertTrue(README.contains("annotationProcessor(\"io.github.ronnygunawan:rawit:"),
+        assertTrue(README.contains("annotationProcessor(\"io.github.projectrawit:rawit:"),
                 "README.md should contain Gradle Kotlin DSL annotationProcessor snippet");
     }
 
     @Test
     void readmeContainsGradleKotlinCompileOnly() {
-        assertTrue(README.contains("compileOnly(\"io.github.ronnygunawan:rawit:"),
+        assertTrue(README.contains("compileOnly(\"io.github.projectrawit:rawit:"),
                 "README.md should contain Gradle Kotlin DSL compileOnly snippet");
     }
 

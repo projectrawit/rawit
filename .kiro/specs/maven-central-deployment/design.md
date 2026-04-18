@@ -3,7 +3,7 @@
 ## Overview
 
 This feature prepares the Rawit annotation processor for publication to Maven Central under the
-verified namespace `io.github.ronnygunawan`. The changes are purely mechanical — no runtime
+verified namespace `io.github.projectrawit`. The changes are purely mechanical — no runtime
 behaviour changes — but they touch several layers of the project simultaneously:
 
 1. **POM coordinates and metadata** — `groupId`, `artifactId`, `description`, and the release
@@ -62,7 +62,7 @@ class name must be `rawit.processors.RawitAnnotationProcessor`.
 
 **Target state:**
 ```xml
-<groupId>io.github.ronnygunawan</groupId>
+<groupId>io.github.projectrawit</groupId>
 <artifactId>rawit</artifactId>
 <description>Compile-time staged invocation API via @Invoker and @Constructor annotation processors</description>
 ```
@@ -151,7 +151,7 @@ rawit.processors.RawitAnnotationProcessor
 
 <!-- After -->
 <dependency>
-    <groupId>io.github.ronnygunawan</groupId>
+    <groupId>io.github.projectrawit</groupId>
     <artifactId>rawit</artifactId>
     <version>VERSION</version>
 </dependency>
@@ -162,16 +162,16 @@ rawit.processors.RawitAnnotationProcessor
 ```groovy
 // Groovy DSL
 dependencies {
-    annotationProcessor 'io.github.ronnygunawan:rawit:VERSION'
-    compileOnly 'io.github.ronnygunawan:rawit:VERSION'
+    annotationProcessor 'io.github.projectrawit:rawit:VERSION'
+    compileOnly 'io.github.projectrawit:rawit:VERSION'
 }
 ```
 
 ```kotlin
 // Kotlin DSL
 dependencies {
-    annotationProcessor("io.github.ronnygunawan:rawit:VERSION")
-    compileOnly("io.github.ronnygunawan:rawit:VERSION")
+    annotationProcessor("io.github.projectrawit:rawit:VERSION")
+    compileOnly("io.github.projectrawit:rawit:VERSION")
 }
 ```
 
@@ -277,7 +277,7 @@ These are written as JUnit 5 tests and verify the acceptance criteria that are s
 known files:
 
 **PomCoordinatesTest**
-- Parses `pom.xml` and asserts `groupId == "io.github.ronnygunawan"`.
+- Parses `pom.xml` and asserts `groupId == "io.github.projectrawit"`.
 - Asserts `artifactId == "rawit"`.
 - Asserts `description` contains `"@Invoker"` and `"@Constructor"` and does not contain `"@Curry"`.
 - Asserts top-level elements `<name>`, `<url>`, `<licenses>`, `<developers>`, `<scm>` are present.
@@ -286,11 +286,11 @@ known files:
 - Asserts `autoPublish=true` implies `waitUntil=published`.
 
 **ReadmeSnippetsTest**
-- Reads `README.md` and asserts it contains `<groupId>io.github.ronnygunawan</groupId>`.
+- Reads `README.md` and asserts it contains `<groupId>io.github.projectrawit</groupId>`.
 - Asserts it contains `<artifactId>rawit</artifactId>`.
 - Asserts it does NOT contain `rg.rawit` or `rg-rawit`.
-- Asserts it contains the Groovy DSL lines `annotationProcessor 'io.github.ronnygunawan:rawit:` and `compileOnly 'io.github.ronnygunawan:rawit:`.
-- Asserts it contains the Kotlin DSL lines `annotationProcessor("io.github.ronnygunawan:rawit:` and `compileOnly("io.github.ronnygunawan:rawit:`.
+- Asserts it contains the Groovy DSL lines `annotationProcessor 'io.github.projectrawit:rawit:` and `compileOnly 'io.github.projectrawit:rawit:`.
+- Asserts it contains the Kotlin DSL lines `annotationProcessor("io.github.projectrawit:rawit:` and `compileOnly("io.github.projectrawit:rawit:`.
 - Asserts it contains `import rawit.Invoker` and `import rawit.Constructor`.
 
 **ServiceRegistrationTest**

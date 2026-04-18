@@ -14,7 +14,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.github.ronnygunawan</groupId>
+            <groupId>io.github.projectrawit</groupId>
             <artifactId>rawit</artifactId>
             <version>0.0.8</version>
         </dependency>

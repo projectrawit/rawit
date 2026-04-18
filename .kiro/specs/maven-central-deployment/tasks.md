@@ -2,28 +2,28 @@
 
 ## Overview
 
-Coordinate update to publish Rawit under `io.github.ronnygunawan:rawit`.
+Coordinate update to publish Rawit under `io.github.projectrawit:rawit`.
 Updates POM coordinates, description, Maven Central publishing configuration, and README snippets.
 
 ## Tasks
 
 - [x] 1. Update pom.xml coordinates and description
-  - Change `<groupId>` from `rg.rawit` to `io.github.ronnygunawan`
+  - Change `<groupId>` from `rg.rawit` to `io.github.projectrawit`
   - Change `<artifactId>` from `rg-rawit` to `rawit`
   - Change `<description>` to reference `@Invoker` and `@Constructor` instead of `@Curry`
   - _Requirements: 1.1, 1.2, 2.1, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
 
 - [x] 2. Update README.md installation snippets and import examples
-  - Replace the Maven `<dependency>` snippet: update `<groupId>` to `io.github.ronnygunawan` and `<artifactId>` to `rawit`; remove any reference to `rg.rawit` or `rg-rawit`
-  - Add a Gradle Groovy DSL snippet with `annotationProcessor 'io.github.ronnygunawan:rawit:VERSION'` and `compileOnly 'io.github.ronnygunawan:rawit:VERSION'`
-  - Add a Gradle Kotlin DSL snippet with `annotationProcessor("io.github.ronnygunawan:rawit:VERSION")` and `compileOnly("io.github.ronnygunawan:rawit:VERSION")`
+  - Replace the Maven `<dependency>` snippet: update `<groupId>` to `io.github.projectrawit` and `<artifactId>` to `rawit`; remove any reference to `rg.rawit` or `rg-rawit`
+  - Add a Gradle Groovy DSL snippet with `annotationProcessor 'io.github.projectrawit:rawit:VERSION'` and `compileOnly 'io.github.projectrawit:rawit:VERSION'`
+  - Add a Gradle Kotlin DSL snippet with `annotationProcessor("io.github.projectrawit:rawit:VERSION")` and `compileOnly("io.github.projectrawit:rawit:VERSION")`
   - Update the `import rawit.Invoker;` and `import rawit.Constructor;` examples
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 5.1, 5.2, 5.3, 5.4, 5.5_
 
 - [x] 3. Write verification tests
   - [x] 3.1 Write PomCoordinatesTest
     - Parse `pom.xml` with `javax.xml.parsers.DocumentBuilder` and assert:
-      - `groupId == "io.github.ronnygunawan"`
+      - `groupId == "io.github.projectrawit"`
       - `artifactId == "rawit"`
       - `description` contains `"@Invoker"` and `"@Constructor"` and does not contain `"@Curry"`
       - Top-level elements `<name>`, `<url>`, `<licenses>`, `<developers>`, `<scm>` are present
@@ -33,7 +33,7 @@ Updates POM coordinates, description, Maven Central publishing configuration, an
 
   - [x] 3.2 Write ReadmeSnippetsTest
     - Read `README.md` as a string and assert:
-      - Contains `<groupId>io.github.ronnygunawan</groupId>`
+      - Contains `<groupId>io.github.projectrawit</groupId>`
       - Contains `<artifactId>rawit</artifactId>`
       - Does NOT contain `rg.rawit` or `rg-rawit`
       - Contains Groovy and Kotlin DSL Gradle snippets

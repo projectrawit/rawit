@@ -1,6 +1,6 @@
 # 🌶️ Rawit
 
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.ronnygunawan/rawit)](https://central.sonatype.com/artifact/io.github.ronnygunawan/rawit)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.projectrawit/rawit)](https://central.sonatype.com/artifact/io.github.projectrawit/rawit)
 
 > Compile-time staged invocation for Java — fluent, type-safe call chains at compile time.
 
@@ -39,7 +39,7 @@ foo.bar().x(10).y(20).invoke();
 
 ```xml
 <dependency>
-    <groupId>io.github.ronnygunawan</groupId>
+    <groupId>io.github.projectrawit</groupId>
     <artifactId>rawit</artifactId>
     <version>VERSION</version>
 </dependency>
@@ -49,8 +49,8 @@ foo.bar().x(10).y(20).invoke();
 
 ```groovy
 dependencies {
-    annotationProcessor 'io.github.ronnygunawan:rawit:VERSION'
-    compileOnly 'io.github.ronnygunawan:rawit:VERSION'
+    annotationProcessor 'io.github.projectrawit:rawit:VERSION'
+    compileOnly 'io.github.projectrawit:rawit:VERSION'
 }
 ```
 
@@ -58,8 +58,8 @@ dependencies {
 
 ```kotlin
 dependencies {
-    annotationProcessor("io.github.ronnygunawan:rawit:VERSION")
-    compileOnly("io.github.ronnygunawan:rawit:VERSION")
+    annotationProcessor("io.github.projectrawit:rawit:VERSION")
+    compileOnly("io.github.projectrawit:rawit:VERSION")
 }
 ```
 
