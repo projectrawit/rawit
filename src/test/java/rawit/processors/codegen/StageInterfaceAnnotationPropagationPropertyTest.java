@@ -1,6 +1,5 @@
 package rawit.processors.codegen;
 
-import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeSpec;
@@ -8,7 +7,6 @@ import net.jqwik.api.*;
 import rawit.processors.model.*;
 import rawit.processors.model.MergeNode.*;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
