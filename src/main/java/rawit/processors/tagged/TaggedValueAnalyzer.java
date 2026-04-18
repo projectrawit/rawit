@@ -89,14 +89,27 @@ public final class TaggedValueAnalyzer {
             return;
         }
 
-        // Iterate all root elements in the round and analyze their compilation units
+        final java.util.Set<java.net.URI> analyzedCompilationUnits = new java.util.HashSet<>();
+
+        // Iterate all root elements in the round and analyze each compilation unit once
         for (final Element rootElement : roundEnv.getRootElements()) {
             if (!(rootElement instanceof TypeElement)) {
                 continue;
             }
             try {
+                final com.sun.source.util.TreePath treePath = trees.getPath(rootElement);
+                if (treePath == null) {
+                    continue;
+                }
                 final com.sun.source.tree.CompilationUnitTree compilationUnit =
-                        trees.getPath(rootElement).getCompilationUnit();
+                        treePath.getCompilationUnit();
+                if (compilationUnit == null || compilationUnit.getSourceFile() == null) {
+                    continue;
+                }
+                final java.net.URI sourceUri = compilationUnit.getSourceFile().toUri();
+                if (!analyzedCompilationUnits.add(sourceUri)) {
+                    continue;
+                }
                 analyze(tagMap, compilationUnit, trees, processingEnv);
             } catch (final NullPointerException ignored) {
                 // Tree path not available for this element — skip
@@ -252,7 +265,7 @@ public final class TaggedValueAnalyzer {
                         messager.printMessage(
                                 Diagnostic.Kind.WARNING,
                                 w.toMessage(),
-                                trees.getElement(contextPath)
+                                targetElement
                         );
                     });
                 } catch (final Exception ignored) {
@@ -286,13 +299,25 @@ public final class TaggedValueAnalyzer {
 
             /**
              * Resolves the tag for a method's return value by inspecting
-             * annotations on the method element itself.
+             * annotations on the method's return type.
              */
             private TagResolution resolveMethodReturnTag(
                     final ExecutableElement method
             ) {
-                // Check annotations on the method element (which may include
-                // type-use annotations on the return type)
+                // Check annotations on the return type (type-use annotations)
+                final List<? extends javax.lang.model.element.AnnotationMirror> returnAnnotations =
+                        method.getReturnType().getAnnotationMirrors();
+                for (final javax.lang.model.element.AnnotationMirror mirror : returnAnnotations) {
+                    final Element annotationElement = mirror.getAnnotationType().asElement();
+                    if (annotationElement instanceof TypeElement typeElement) {
+                        final String fqn = typeElement.getQualifiedName().toString();
+                        final TagInfo info = tagMap.get(fqn);
+                        if (info != null) {
+                            return new TagResolution.Tagged(info);
+                        }
+                    }
+                }
+                // Fall back to annotations on the method element itself
                 return tagResolver.resolve(method, tagMap, messager);
             }
 
