@@ -17,6 +17,7 @@ import rawit.processors.model.OverloadGroup;
 import rawit.processors.model.Parameter;
 import rawit.processors.model.TagInfo;
 import rawit.processors.tagged.TagDiscoverer;
+import rawit.processors.tagged.TagResolver;
 import rawit.processors.tagged.TaggedValueAnalyzer;
 import rawit.processors.validation.ElementValidator;
 import rawit.processors.validation.GetterValidator;
@@ -142,6 +143,18 @@ public class RawitAnnotationProcessor extends AbstractProcessor {
         final TagDiscoverer tagDiscoverer = new TagDiscoverer();
         final Map<String, TagInfo> roundTagMap = tagDiscoverer.discover(roundEnv, processingEnv);
         cachedTagMap.putAll(roundTagMap);
+
+        // Also scan the annotations set for tag annotations from dependency JARs.
+        // When tag annotations come from pre-compiled JARs, TagDiscoverer won't find them
+        // (they're not compiled in this round), but they appear in the annotations set.
+        for (final TypeElement annotation : annotations) {
+            final String fqn = annotation.getQualifiedName().toString();
+            if (!cachedTagMap.containsKey(fqn)) {
+                final TagInfo discovered = TagResolver.lazyDiscover(annotation, cachedTagMap);
+                // lazyDiscover adds to cachedTagMap if found
+            }
+        }
+
         if (!cachedTagMap.isEmpty()) {
             final TaggedValueAnalyzer taggedValueAnalyzer = new TaggedValueAnalyzer();
             taggedValueAnalyzer.analyzeRound(cachedTagMap, roundEnv, processingEnv, analyzedTaggedValueUnits);

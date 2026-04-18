@@ -641,4 +641,49 @@ class TaggedValueAnalyzerIntegrationTest {
         assertTrue(warnings.stream().anyMatch(w -> w.contains("tag mismatch")),
                 "Expected tag mismatch warning for return statement, got: " + warnings);
     }
+
+    // =========================================================================
+    // Test 15 — Multiple-tag warning deduplication: same element used in
+    //           multiple assignments should produce only one duplicate-tag warning
+    // Validates: Requirements 11.1, 11.2 (dedup regression)
+    // =========================================================================
+
+    @Test
+    void multipleTags_usedInMultipleAssignments_onlyOneDuplicateWarning(
+            @TempDir final Path outputDir) throws Exception {
+        final String nickNameSource =
+                "package testpkg;\n" +
+                "import rawit.TaggedValue;\n" +
+                "import java.lang.annotation.*;\n" +
+                "@TaggedValue\n" +
+                "@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE})\n" +
+                "@Retention(RetentionPolicy.CLASS)\n" +
+                "public @interface NickName { }\n";
+
+        final String usageSource =
+                "package testpkg;\n" +
+                "public class DedupMultiTagTest {\n" +
+                "    void test() {\n" +
+                "        @FirstName @NickName String name = \"John\";\n" +
+                "        @FirstName String a = name;\n" +
+                "        @FirstName String b = name;\n" +
+                "        @FirstName String c = name;\n" +
+                "    }\n" +
+                "}\n";
+
+        final List<Diagnostic<? extends JavaFileObject>> diagnostics = compileWithProcessor(
+                List.of("testpkg.FirstName", "testpkg.NickName", "testpkg.DedupMultiTagTest"),
+                List.of(FIRST_NAME_SOURCE, nickNameSource, usageSource),
+                outputDir);
+
+        assertNoErrors(diagnostics);
+
+        final long multipleTagWarningCount = diagnostics.stream()
+                .filter(d -> d.getKind() == Diagnostic.Kind.WARNING)
+                .filter(d -> d.getMessage(null).contains("multiple tag"))
+                .count();
+        assertEquals(1, multipleTagWarningCount,
+                "Expected exactly 1 duplicate-tag warning (not one per assignment), got: "
+                        + multipleTagWarningCount);
+    }
 }

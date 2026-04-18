@@ -135,6 +135,10 @@ public final class TaggedValueAnalyzer {
 
         new com.sun.source.util.TreePathScanner<Void, Void>() {
 
+            /** Methods already warned about having multiple return type tags. */
+            private final java.util.Set<ExecutableElement> warnedReturnTypeMethods =
+                    java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+
             // --- Variable declarations with initializers ---
             @Override
             public Void visitVariable(
@@ -358,14 +362,16 @@ public final class TaggedValueAnalyzer {
                         }
                         if (info != null) {
                             if (firstTag != null) {
-                                final String firstName = simpleName(firstTag.tag().annotationFqn());
-                                final String secondName = simpleName(info.annotationFqn());
-                                messager.printMessage(
-                                        Diagnostic.Kind.WARNING,
-                                        "multiple tag annotations on return type; using @"
-                                                + firstName + ", ignoring @" + secondName,
-                                        method
-                                );
+                                if (warnedReturnTypeMethods.add(method)) {
+                                    final String firstName = simpleName(firstTag.tag().annotationFqn());
+                                    final String secondName = simpleName(info.annotationFqn());
+                                    messager.printMessage(
+                                            Diagnostic.Kind.WARNING,
+                                            "multiple tag annotations on return type; using @"
+                                                    + firstName + ", ignoring @" + secondName,
+                                            method
+                                    );
+                                }
                                 return firstTag;
                             }
                             firstTag = new TagResolution.Tagged(info);
