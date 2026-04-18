@@ -272,7 +272,8 @@ class TagResolverPropertyTest {
     }
 
     /**
-     * Creates a simple stub {@link TypeElement} that supports {@code getQualifiedName()}.
+     * Creates a simple stub {@link TypeElement} that supports {@code getQualifiedName()}
+     * and {@code getAnnotationMirrors()} (returns empty list for non-tag annotations).
      */
     private static TypeElement createSimpleTypeElementStub(String fqn) {
         return (TypeElement) Proxy.newProxyInstance(
@@ -280,6 +281,7 @@ class TagResolverPropertyTest {
                 new Class<?>[]{TypeElement.class},
                 (proxy, method, args) -> switch (method.getName()) {
                     case "getQualifiedName" -> createNameStub(fqn);
+                    case "getAnnotationMirrors" -> List.of();
                     case "hashCode" -> fqn.hashCode();
                     case "equals" -> proxy == args[0];
                     case "toString" -> "TypeElement[" + fqn + "]";

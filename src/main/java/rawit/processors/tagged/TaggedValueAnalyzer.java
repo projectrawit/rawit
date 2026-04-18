@@ -198,13 +198,43 @@ public final class TaggedValueAnalyzer {
             ) {
                 final com.sun.source.tree.ExpressionTree expr = node.getExpression();
                 if (expr != null) {
-                    // Find the enclosing method to get its return type element
                     final ExecutableElement enclosingMethod = findEnclosingMethod();
                     if (enclosingMethod != null) {
-                        checkAssignment(enclosingMethod, expr, getCurrentPath(), node);
+                        checkReturnAssignment(enclosingMethod, expr, getCurrentPath(), node);
                     }
                 }
                 return super.visitReturn(node, unused);
+            }
+
+            /**
+             * Validates a return expression against the enclosing method's tagged return type.
+             * Type-use annotations on the return type live on {@code method.getReturnType()},
+             * not on the method element itself, so prefer the return type as the target.
+             */
+            private void checkReturnAssignment(
+                    final ExecutableElement enclosingMethod,
+                    final com.sun.source.tree.ExpressionTree expression,
+                    final com.sun.source.util.TreePath contextPath,
+                    final com.sun.source.tree.Tree contextNode
+            ) {
+                // Resolve target tag from return type annotations first
+                final TagResolution returnTag = resolveMethodReturnTag(enclosingMethod);
+                if (returnTag instanceof TagResolution.Tagged) {
+                    // Use a synthetic check with the resolved return tag
+                    try {
+                        final TagResolution sourceTag = resolveSourceTag(expression, contextPath);
+                        final boolean isLiteralOrConst = isLiteralOrConstant(expression, contextPath);
+                        final Optional<AssignmentWarning> warning =
+                                assignmentChecker.check(sourceTag, returnTag, isLiteralOrConst);
+                        warning.ifPresent(w -> messager.printMessage(
+                                Diagnostic.Kind.WARNING, w.toMessage(), enclosingMethod));
+                    } catch (final NullPointerException | IllegalArgumentException ignored) {
+                        // Unresolvable elements — skip
+                    }
+                    return;
+                }
+                // Fall back to method element annotations
+                checkAssignment(enclosingMethod, expression, contextPath, contextNode);
             }
 
             /**
@@ -257,19 +287,13 @@ public final class TaggedValueAnalyzer {
                             assignmentChecker.check(sourceTag, targetTag, isLiteralOrConst);
 
                     // Emit warning if applicable
-                    warning.ifPresent(w -> {
-                        final com.sun.source.tree.Tree diagTree =
-                                (contextTree instanceof com.sun.source.tree.VariableTree
-                                        || contextTree instanceof com.sun.source.tree.AssignmentTree)
-                                        ? contextTree : sourceExpr;
-                        messager.printMessage(
-                                Diagnostic.Kind.WARNING,
-                                w.toMessage(),
-                                targetElement
-                        );
-                    });
-                } catch (final Exception ignored) {
-                    // Unresolvable elements — silently skip
+                    warning.ifPresent(w -> messager.printMessage(
+                            Diagnostic.Kind.WARNING,
+                            w.toMessage(),
+                            targetElement
+                    ));
+                } catch (final NullPointerException | IllegalArgumentException ignored) {
+                    // Unresolvable elements during analysis — skip this assignment
                 }
             }
 
@@ -327,8 +351,8 @@ public final class TaggedValueAnalyzer {
              * <p>Checks for:
              * <ul>
              *   <li>{@code LiteralTree} — numeric, string, boolean, char, null literals</li>
-             *   <li>{@code IdentifierTree} referencing a {@code static final} field
-             *       with a constant value</li>
+             *   <li>{@code IdentifierTree} referencing a variable with a constant value
+             *       (including {@code static final} fields and {@code final} locals)</li>
              * </ul>
              */
             private boolean isLiteralOrConstant(
@@ -343,10 +367,7 @@ public final class TaggedValueAnalyzer {
                             new com.sun.source.util.TreePath(parentPath, expr);
                     final Element element = trees.getElement(idPath);
                     if (element instanceof VariableElement varElement) {
-                        // Check if it's a static final field with a constant value
-                        return varElement.getModifiers().contains(Modifier.STATIC)
-                                && varElement.getModifiers().contains(Modifier.FINAL)
-                                && varElement.getConstantValue() != null;
+                        return varElement.getConstantValue() != null;
                     }
                 }
                 return false;

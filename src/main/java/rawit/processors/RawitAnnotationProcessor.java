@@ -59,7 +59,6 @@ public class RawitAnnotationProcessor extends AbstractProcessor {
     private static final String INVOKER_ANNOTATION_FQN = "rawit.Invoker";
     private static final String CONSTRUCTOR_ANNOTATION_FQN = "rawit.Constructor";
     private static final String GETTER_ANNOTATION_FQN = "rawit.Getter";
-    private static final String TAGGED_VALUE_ANNOTATION_FQN = "rawit.TaggedValue";
 
     /** Pending invoker/constructor injections deferred until the GENERATE phase. */
     private final Map<String, List<MergeTree>> pendingInvokerInjections = new LinkedHashMap<>();
@@ -146,6 +145,18 @@ public class RawitAnnotationProcessor extends AbstractProcessor {
         }
 
         if (annotations.isEmpty()) {
+            return false;
+        }
+
+        // Early exit: if no rawit annotations are present, skip getter/invoker processing.
+        // Since getSupportedAnnotationTypes() returns "*", the processor runs on every round.
+        final boolean hasRawitAnnotations = annotations.stream().anyMatch(a -> {
+            final String fqn = a.getQualifiedName().toString();
+            return INVOKER_ANNOTATION_FQN.equals(fqn)
+                    || CONSTRUCTOR_ANNOTATION_FQN.equals(fqn)
+                    || GETTER_ANNOTATION_FQN.equals(fqn);
+        });
+        if (!hasRawitAnnotations) {
             return false;
         }
 

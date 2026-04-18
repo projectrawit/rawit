@@ -142,9 +142,9 @@ Implement the `@TaggedValue` meta-annotation and compile-time tagged value analy
 - [x] 9. Integrate into `RawitAnnotationProcessor`
   - [x] 9.1 Add `@TaggedValue` processing branch to `RawitAnnotationProcessor`
     - Modify `src/main/java/rawit/processors/RawitAnnotationProcessor.java`
-    - Add `TAGGED_VALUE_ANNOTATION_FQN = "rawit.TaggedValue"` constant
-    - Add `rawit.TaggedValue` to `getSupportedAnnotationTypes()`
-    - In `process()`, add `@TaggedValue` branch:
+    - Change `getSupportedAnnotationTypes()` to return `Set.of("*")` so the processor is invoked even when tag annotations come from pre-compiled JARs
+    - Add early return optimization: if tag map is empty and no rawit annotations are present, return immediately
+    - In `process()`, add `@TaggedValue` branch before the early return:
       - Instantiate `TagDiscoverer` and call `discover()` to build the tag map
       - If tag map is non-empty, instantiate `TaggedValueAnalyzer` and call `analyzeRound()`
     - The analyzer is stateless — no initialization needed in `init()`

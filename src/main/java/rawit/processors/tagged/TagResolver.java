@@ -27,9 +27,11 @@ public final class TagResolver {
 
     /**
      * Resolves the effective tag for an element by inspecting its annotations.
+     * If an annotation is not yet in the tag map but carries {@code @TaggedValue},
+     * it is dynamically discovered and added to the map.
      *
      * @param element  the element to inspect
-     * @param tagMap   the known tag annotations (FQN → {@link TagInfo})
+     * @param tagMap   the known tag annotations (FQN → {@link TagInfo}), may be mutated
      * @param messager for emitting duplicate-tag warnings
      * @return the tag resolution result
      */
@@ -44,7 +46,11 @@ public final class TagResolver {
             final Element annotationElement = mirror.getAnnotationType().asElement();
             if (annotationElement instanceof TypeElement typeElement) {
                 final String fqn = typeElement.getQualifiedName().toString();
-                final TagInfo info = tagMap.get(fqn);
+                TagInfo info = tagMap.get(fqn);
+                if (info == null) {
+                    // Lazy discovery: check if this annotation is meta-annotated with @TaggedValue
+                    info = lazyDiscover(typeElement, tagMap);
+                }
                 if (info != null) {
                     matched.add(info);
                 }
@@ -77,5 +83,41 @@ public final class TagResolver {
         final String fqn = tag.annotationFqn();
         final int dot = fqn.lastIndexOf('.');
         return dot < 0 ? fqn : fqn.substring(dot + 1);
+    }
+
+    /**
+     * Checks if an annotation type is meta-annotated with {@code @TaggedValue}.
+     * If so, creates a {@link TagInfo} and adds it to the tag map for future lookups.
+     *
+     * @param annotationType the annotation type element to check
+     * @param tagMap         the tag map to update if a tag is discovered
+     * @return the discovered {@link TagInfo}, or {@code null} if not a tag annotation
+     */
+    private static TagInfo lazyDiscover(
+            final TypeElement annotationType,
+            final Map<String, TagInfo> tagMap
+    ) {
+        final String taggedValueFqn = rawit.TaggedValue.class.getCanonicalName();
+        for (final AnnotationMirror meta : annotationType.getAnnotationMirrors()) {
+            final Element metaType = meta.getAnnotationType().asElement();
+            if (metaType instanceof TypeElement te
+                    && te.getQualifiedName().contentEquals(taggedValueFqn)) {
+                // Found @TaggedValue — extract strict attribute
+                boolean strict = false;
+                for (final var entry : meta.getElementValues().entrySet()) {
+                    if ("strict".contentEquals(entry.getKey().getSimpleName())) {
+                        final Object value = entry.getValue().getValue();
+                        if (value instanceof Boolean b) {
+                            strict = b;
+                        }
+                    }
+                }
+                final String fqn = annotationType.getQualifiedName().toString();
+                final TagInfo info = new TagInfo(fqn, strict);
+                tagMap.put(fqn, info);
+                return info;
+            }
+        }
+        return null;
     }
 }
