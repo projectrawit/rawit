@@ -462,13 +462,18 @@ class TaggedValueAnalyzerIntegrationTest {
 
     // =========================================================================
     // Test 11 — Builder stage method chain: tag checking applies to stage method arguments
+    // NOTE: This test uses a hand-written builder with manually tagged parameters
+    // to validate the analyzer's method-invocation argument checking. Rawit's
+    // codegen does not currently propagate tag annotations onto generated stage
+    // method parameters, so this test does not cover the generated-chain case.
     // Validates: Requirements 10.1, 10.2
     // =========================================================================
 
     @Test
-    void generatedBuilderStageMethodChain_warnsOnTagMismatch(
+    void builderStageMethodChain_warnsOnTagMismatch(
             @TempDir final Path outputDir) throws Exception {
-        // Simulate a builder with stage methods that have tagged parameters
+        // Hand-written builder with manually tagged parameters to validate
+        // the analyzer's method-invocation argument checking.
         final String userSource =
                 "package testpkg;\n" +
                 "public class User {\n" +
@@ -528,7 +533,7 @@ class TaggedValueAnalyzerIntegrationTest {
                 "import rawit.TaggedValue;\n" +
                 "import java.lang.annotation.*;\n" +
                 "@TaggedValue(strict = true)\n" +
-                "@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE, ElementType.METHOD})\n" +
+                "@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE, ElementType.TYPE_USE})\n" +
                 "@Retention(RetentionPolicy.CLASS)\n" +
                 "public @interface UserIdMethod { }\n";
 
@@ -569,7 +574,7 @@ class TaggedValueAnalyzerIntegrationTest {
                 "import rawit.TaggedValue;\n" +
                 "import java.lang.annotation.*;\n" +
                 "@TaggedValue(strict = true)\n" +
-                "@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE, ElementType.METHOD})\n" +
+                "@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE, ElementType.TYPE_USE})\n" +
                 "@Retention(RetentionPolicy.CLASS)\n" +
                 "public @interface UserIdMethod { }\n";
 
@@ -607,7 +612,7 @@ class TaggedValueAnalyzerIntegrationTest {
                 "import rawit.TaggedValue;\n" +
                 "import java.lang.annotation.*;\n" +
                 "@TaggedValue\n" +
-                "@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE, ElementType.METHOD})\n" +
+                "@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE, ElementType.TYPE_USE})\n" +
                 "@Retention(RetentionPolicy.CLASS)\n" +
                 "public @interface FirstNameMethod { }\n";
 
@@ -616,7 +621,7 @@ class TaggedValueAnalyzerIntegrationTest {
                 "import rawit.TaggedValue;\n" +
                 "import java.lang.annotation.*;\n" +
                 "@TaggedValue\n" +
-                "@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE, ElementType.METHOD})\n" +
+                "@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE, ElementType.TYPE_USE})\n" +
                 "@Retention(RetentionPolicy.CLASS)\n" +
                 "public @interface LastNameMethod { }\n";
 
@@ -685,5 +690,134 @@ class TaggedValueAnalyzerIntegrationTest {
         assertEquals(1, multipleTagWarningCount,
                 "Expected exactly 1 duplicate-tag warning (not one per assignment), got: "
                         + multipleTagWarningCount);
+    }
+
+    // =========================================================================
+    // Test 16 — Unary minus on literal assigned to strict tagged: no warning
+    // Validates: Requirements 3.2 (unary constant expression exempt)
+    // =========================================================================
+
+    @Test
+    void unaryMinusLiteral_toStrictTagged_noWarning(@TempDir final Path outputDir)
+            throws Exception {
+        final String usageSource =
+                "package testpkg;\n" +
+                "public class UnaryMinusTest {\n" +
+                "    void test() {\n" +
+                "        @UserId long id = -1L;\n" +
+                "    }\n" +
+                "}\n";
+
+        final List<Diagnostic<? extends JavaFileObject>> diagnostics = compileWithProcessor(
+                List.of("testpkg.UserId", "testpkg.UnaryMinusTest"),
+                List.of(USER_ID_SOURCE, usageSource),
+                outputDir);
+
+        assertNoErrors(diagnostics);
+
+        final List<String> warnings = warningMessages(diagnostics);
+        assertTrue(warnings.stream().noneMatch(w ->
+                        w.contains("untagged") && w.contains("UserId")),
+                "Expected no warning for unary minus literal → strict tagged, got: " + warnings);
+    }
+
+    // =========================================================================
+    // Test 17 — Binary constant expression assigned to strict tagged
+    // Documents behavior: 1L + 2L is a binary expression, not recognized as a
+    // simple literal/constant by the analyzer (javac folds it, but the AST
+    // still shows a BinaryTree). This test documents that a warning IS emitted.
+    // =========================================================================
+
+    @Test
+    void binaryConstantExpression_toStrictTagged_emitsWarning(@TempDir final Path outputDir)
+            throws Exception {
+        final String usageSource =
+                "package testpkg;\n" +
+                "public class BinaryConstExprTest {\n" +
+                "    void test() {\n" +
+                "        @UserId long id = 1L + 2L;\n" +
+                "    }\n" +
+                "}\n";
+
+        final List<Diagnostic<? extends JavaFileObject>> diagnostics = compileWithProcessor(
+                List.of("testpkg.UserId", "testpkg.BinaryConstExprTest"),
+                List.of(USER_ID_SOURCE, usageSource),
+                outputDir);
+
+        assertNoErrors(diagnostics);
+
+        // Binary constant expressions (1L + 2L) are not recognized as literals
+        // by the analyzer's isLiteralOrConstant check — the AST shows a BinaryTree,
+        // not a LiteralTree. A warning IS expected here.
+        final List<String> warnings = warningMessages(diagnostics);
+        assertTrue(warnings.stream().anyMatch(w ->
+                        w.contains("untagged") && w.contains("UserId")),
+                "Expected warning for binary expression → strict tagged (not recognized as constant), got: "
+                        + warnings);
+    }
+
+    // =========================================================================
+    // Test 18 — Static final constant assigned to strict tagged: no warning
+    // Validates: Requirements 3.2 (compile-time constant exempt)
+    // =========================================================================
+
+    @Test
+    void staticFinalConstant_toStrictTagged_noWarning(@TempDir final Path outputDir)
+            throws Exception {
+        final String usageSource =
+                "package testpkg;\n" +
+                "public class StaticFinalConstTest {\n" +
+                "    static final long CONST = 42L;\n" +
+                "    void test() {\n" +
+                "        @UserId long id = CONST;\n" +
+                "    }\n" +
+                "}\n";
+
+        final List<Diagnostic<? extends JavaFileObject>> diagnostics = compileWithProcessor(
+                List.of("testpkg.UserId", "testpkg.StaticFinalConstTest"),
+                List.of(USER_ID_SOURCE, usageSource),
+                outputDir);
+
+        assertNoErrors(diagnostics);
+
+        final List<String> warnings = warningMessages(diagnostics);
+        assertTrue(warnings.stream().noneMatch(w ->
+                        w.contains("untagged") && w.contains("UserId")),
+                "Expected no warning for static final constant → strict tagged, got: " + warnings);
+    }
+
+    // =========================================================================
+    // Test 19 — Final local variable with constant value assigned to strict tagged
+    // Documents behavior: final local variables with constant initializers may
+    // or may not have getConstantValue() != null depending on the javac version.
+    // This test documents the observed behavior.
+    // =========================================================================
+
+    @Test
+    void finalLocalConstant_toStrictTagged_documentsConstantDetection(
+            @TempDir final Path outputDir) throws Exception {
+        final String usageSource =
+                "package testpkg;\n" +
+                "public class FinalLocalConstTest {\n" +
+                "    void test() {\n" +
+                "        final long localConst = 42L;\n" +
+                "        @UserId long id = localConst;\n" +
+                "    }\n" +
+                "}\n";
+
+        final List<Diagnostic<? extends JavaFileObject>> diagnostics = compileWithProcessor(
+                List.of("testpkg.UserId", "testpkg.FinalLocalConstTest"),
+                List.of(USER_ID_SOURCE, usageSource),
+                outputDir);
+
+        assertNoErrors(diagnostics);
+
+        // Final local variables with constant initializers are recognized as
+        // compile-time constants by javac (getConstantValue() returns non-null),
+        // so no warning should be emitted.
+        final List<String> warnings = warningMessages(diagnostics);
+        assertTrue(warnings.stream().noneMatch(w ->
+                        w.contains("untagged") && w.contains("UserId")),
+                "Expected no warning for final local constant → strict tagged, got: " + warnings);
     }
 }

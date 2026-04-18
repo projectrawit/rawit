@@ -23,9 +23,17 @@ import java.util.Optional;
  * <ul>
  *   <li>Variable declarations with initializers (local variables, fields)</li>
  *   <li>Assignment expressions</li>
- *   <li>Method invocation arguments (including generated builder chain stage methods)</li>
+ *   <li>Method invocation arguments (including builder chain stage methods whose
+ *       parameters carry tag annotations)</li>
  *   <li>Return statements</li>
  * </ul>
+ *
+ * <p><strong>Known limitation:</strong> Method-invocation tag checking relies on
+ * tag annotations being present on the called method's parameter declarations.
+ * Rawit's generated stage methods do not currently propagate parameter annotations
+ * from the original constructor/method, so tag-mismatch checking will not fire
+ * for generated builder chains unless the codegen is updated to copy tag annotations
+ * or the analyzer maps stage methods back to the original parameters.
  *
  * <p>For each assignment-like expression, the analyzer:
  * <ol>
@@ -400,6 +408,7 @@ public final class TaggedValueAnalyzer {
              * <p>Checks for:
              * <ul>
              *   <li>{@code LiteralTree} — numeric, string, boolean, char, null literals</li>
+             *   <li>{@code UnaryTree} — unary constant expressions (e.g. {@code -1L}, {@code +1}, {@code ~0})</li>
              *   <li>{@code IdentifierTree} referencing a variable with a constant value</li>
              *   <li>{@code MemberSelectTree} referencing a qualified constant (e.g. {@code Constants.VALUE})</li>
              *   <li>{@code ParenthesizedTree} wrapping any of the above</li>
@@ -414,6 +423,9 @@ public final class TaggedValueAnalyzer {
                 }
                 if (expr instanceof com.sun.source.tree.ParenthesizedTree paren) {
                     return isLiteralOrConstant(paren.getExpression(), parentPath);
+                }
+                if (expr instanceof com.sun.source.tree.UnaryTree unary) {
+                    return isLiteralOrConstant(unary.getExpression(), parentPath);
                 }
                 if (expr instanceof com.sun.source.tree.IdentifierTree
                         || expr instanceof com.sun.source.tree.MemberSelectTree) {
