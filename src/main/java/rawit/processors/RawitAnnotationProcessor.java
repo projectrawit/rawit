@@ -15,6 +15,9 @@ import rawit.processors.model.AnnotatedMethod;
 import rawit.processors.model.MergeTree;
 import rawit.processors.model.OverloadGroup;
 import rawit.processors.model.Parameter;
+import rawit.processors.model.TagInfo;
+import rawit.processors.tagged.TagDiscoverer;
+import rawit.processors.tagged.TaggedValueAnalyzer;
 import rawit.processors.validation.ElementValidator;
 import rawit.processors.validation.GetterValidator;
 import rawit.processors.validation.ValidationResult;
@@ -56,6 +59,7 @@ public class RawitAnnotationProcessor extends AbstractProcessor {
     private static final String INVOKER_ANNOTATION_FQN = "rawit.Invoker";
     private static final String CONSTRUCTOR_ANNOTATION_FQN = "rawit.Constructor";
     private static final String GETTER_ANNOTATION_FQN = "rawit.Getter";
+    private static final String TAGGED_VALUE_ANNOTATION_FQN = "rawit.TaggedValue";
 
     /** Pending invoker/constructor injections deferred until the GENERATE phase. */
     private final Map<String, List<MergeTree>> pendingInvokerInjections = new LinkedHashMap<>();
@@ -113,7 +117,8 @@ public class RawitAnnotationProcessor extends AbstractProcessor {
 
     @Override
     public final Set<String> getSupportedAnnotationTypes() {
-        return Set.of(INVOKER_ANNOTATION_FQN, CONSTRUCTOR_ANNOTATION_FQN, GETTER_ANNOTATION_FQN);
+        return Set.of(INVOKER_ANNOTATION_FQN, CONSTRUCTOR_ANNOTATION_FQN, GETTER_ANNOTATION_FQN,
+                TAGGED_VALUE_ANNOTATION_FQN);
     }
 
     @Override
@@ -129,6 +134,14 @@ public class RawitAnnotationProcessor extends AbstractProcessor {
         }
 
         final boolean debug = isDebugEnabled();
+
+        // --- @TaggedValue processing ---
+        final TagDiscoverer tagDiscoverer = new TagDiscoverer();
+        final Map<String, TagInfo> tagMap = tagDiscoverer.discover(roundEnv, processingEnv);
+        if (!tagMap.isEmpty()) {
+            final TaggedValueAnalyzer taggedValueAnalyzer = new TaggedValueAnalyzer();
+            taggedValueAnalyzer.analyzeRound(tagMap, roundEnv, processingEnv);
+        }
 
         // --- @Getter processing ---
         final List<AnnotatedField> validGetterFields = new ArrayList<>();
