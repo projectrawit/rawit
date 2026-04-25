@@ -3,66 +3,74 @@
 ## Overview
 
 This document tracks the implementation tasks for the IDE integration feature that enables
-instant IDE reflection for generated staged APIs in VS Code Java (JDT LS / ECJ path).
+Lombok-like source-visible entry-point methods directly on the original annotated class (not
+on a separate generated class).
 
 ## Tasks
 
-- [x] 1. Add static IDE entry-point method to `InvokerClassSpec`
-  - [x] 1.1 Add `buildStaticEntryPointMethod(AnnotatedMethod)` private method
-    - Generates `public static <ClassName>Invoker/<ClassName>Constructor <entryPointName>(...)`
-    - Instance method: includes enclosing-class instance parameter
-    - All other cases: zero-arg
-    - Body: `return new <CallerClass>()` or `return new <CallerClass>(instance)`
-    - _Requirements: 1.1, 1.2, 4.1, 4.2, 4.3, 5.1_
-  - [x] 1.2 Add `resolveEntryPointName(AnnotatedMethod)` private helper
-    - Mirrors `BytecodeInjector.InjectionClassVisitor.resolveOverloadName` logic
-    - `@Constructor` → `"constructor"`
-    - `@Invoker` on constructor → lowercase simple class name
-    - `@Invoker` on method → method name (group name)
-    - _Requirements: 1.3, 4.1, 4.2, 4.3_
-  - [x] 1.3 Call `buildStaticEntryPointMethod()` in `InvokerClassSpec.build()`
-    - Added after the class constructor is generated, before stage method implementations
-    - _Requirements: 1.1, 1.2_
+- [x] 1. Implement `JavacAstInjector` (new class)
+  - [x] 1.1 Add `JavacAstInjector.tryCreate(ProcessingEnvironment)` factory
+    - Uses `JavacTask.instance(env)` to get javac `Context` without coupling to internal types
+    - Loads `TreeMaker`, `Names`, `JCClassDecl`, `JCMethodDecl`, `List` via `Class.forName`
+    - Returns `null` silently on non-javac or inaccessible API
+    - _Requirements: 1.1, 1.3_
+  - [x] 1.2 Add `JavacAstInjector.inject(EntryPoint)` injection method
+    - Builds `JCMethodDecl` via `TreeMaker.MethodDef(...)` with reflection
+    - Appends to `JCClassDecl.defs`
+    - _Requirements: 1.1, 1.2, 5.1_
+  - [x] 1.3 Add `methodExists()` idempotency guard
+    - Walks `JCClassDecl.defs` list to check for existing method by name
+    - _Requirements: 1.2_
+  - [x] 1.4 Ensure silent fallback on any exception
+    - _Requirements: 1.3_
 
-- [x] 2. Add unit tests in `InvokerClassSpecTest`
-  - [x] 2.1 `instanceMethod_hasStaticEntryPointWithInstanceParameter`
-    - Verifies `public static FooBarInvoker bar(Foo instance)` is generated
-    - _Requirements: 1.1, 4.3_
-  - [x] 2.2 `staticMethod_hasStaticEntryPointWithNoParameter`
-    - Verifies `public static FooBarInvoker bar()` is generated
-    - _Requirements: 1.1, 4.3_
-  - [x] 2.3 `constructorAnnotation_hasStaticEntryPointNamedConstructor`
-    - Verifies `public static FooConstructor constructor()` is generated
-    - _Requirements: 1.1, 4.1_
-  - [x] 2.4 `invokerOnConstructor_hasStaticEntryPointNamedAfterClass`
-    - Verifies `public static FooInvoker foo()` is generated
-    - _Requirements: 1.1, 4.2_
-  - [x] 2.5 `staticEntryPointAndStageMethods_areBothPresent`
-    - Verifies static entry-point and stage methods co-exist
-    - _Requirements: 3.2_
+- [x] 2. Expose public static helpers from `BytecodeInjector`
+  - [x] 2.1 Add `public static resolveEntryPointName(MergeTree)` to outer class
+    - Moved from private inner `resolveOverloadName` — single source of truth
+    - _Requirements: 2.2, 4.1, 4.2, 4.3_
+  - [x] 2.2 Add `public static resolveCallerClassBinaryName(MergeTree)` to outer class
+    - _Requirements: 1.1_
+  - [x] 2.3 Add `public static isInstanceEntryPoint(MergeTree)` to outer class
+    - _Requirements: 1.1_
+  - [x] 2.4 Move `packagePrefix` → `resolvePackagePrefix`, `toPascalCase` to outer class statics
+    - Inner class delegates to outer statics (DRY)
 
-- [x] 3. Add integration tests in `RawitAnnotationProcessorIntegrationTest`
-  - [x] 3.1 `ideEntryPoint_constructorAnnotation_staticFactoryOnGeneratedClass`
-    - Full chain: `FooConstructor.constructor().x(7).y(8).construct()`
-    - _Requirements: 2.1, 2.2, 3.1_
-  - [x] 3.2 `ideEntryPoint_invokerOnStaticMethod_staticFactoryOnGeneratedClass`
-    - Full chain: `FooBarInvoker.add().x(10).y(5).invoke()`
-    - _Requirements: 2.1, 2.2, 3.1_
-  - [x] 3.3 `ideEntryPoint_invokerOnInstanceMethod_staticFactoryOnGeneratedClass`
-    - Full chain: `FooBarInvoker.add(adder).x(3).y(4).invoke()`
-    - _Requirements: 2.1, 2.2, 3.1_
+- [x] 3. Wire `JavacAstInjector` into `RawitAnnotationProcessor`
+  - [x] 3.1 Add `JavacAstInjector astInjector` field
+  - [x] 3.2 Initialize in `init()` via `JavacAstInjector.tryCreate(processingEnv)`
+    - Done alongside `TaskListener` registration — same javac guard
+    - _Requirements: 1.1, 1.3_
+  - [x] 3.3 Add Stage 4b in `process()` — loop over `allTrees` and call `astInjector.inject()`
+    - Resolves `TypeElement` for enclosing class via `getElementUtils().getTypeElement()`
+    - Builds `EntryPoint` record from tree metadata
+    - _Requirements: 1.1, 2.1_
 
-- [x] 4. Create spec documents
-  - [x] 4.1 `.kiro/specs/ide-integration/requirements.md`
-  - [x] 4.2 `.kiro/specs/ide-integration/design.md`
-  - [x] 4.3 `.kiro/specs/ide-integration/tasks.md` (this file)
+- [x] 4. Add integration tests in `RawitAnnotationProcessorIntegrationTest`
+  - [x] 4.1 `astInjection_constructorAnnotation_entryPointOnOriginalClass`
+    - Verifies `constructor()` is on `AstCtorFoo` (not on a separate generated class)
+    - Full chain: `AstCtorFoo.constructor().x(3).y(7).construct()`
+    - _Requirements: 1.1, 2.1, 3.1_
+  - [x] 4.2 `astInjection_instanceInvoker_entryPointOnOriginalClass`
+    - Verifies instance `multiply()` is on `AstInvFoo`
+    - Full chain: `new AstInvFoo().multiply().x(3).y(4).invoke()`
+    - _Requirements: 1.1, 2.1, 3.1_
+  - [x] 4.3 `astInjection_staticInvoker_entryPointOnOriginalClass`
+    - Verifies static `greet()` is on `AstStaticFoo`
+    - Full chain: `AstStaticFoo.greet().name("World").greeting("Hello").invoke()`
+    - _Requirements: 1.1, 2.1, 3.1_
 
-- [x] 5. Update `README.md` to document IDE integration
+- [x] 5. Update spec documents
+  - [x] 5.1 `.kiro/specs/ide-integration/requirements.md` — rewritten for Lombok-like approach
+  - [x] 5.2 `.kiro/specs/ide-integration/design.md` — rewritten for AST injection approach
+  - [x] 5.3 `.kiro/specs/ide-integration/tasks.md` (this file)
+
+- [x] 6. Update `README.md` to document IDE integration
 
 ## Notes
 
-- The static entry-point is additive and does not break any existing API.
+- The Lombok-like approach puts entry-points on the original class — no generated-class reference
+  needed in user code.
 - Bytecode injection (`BytecodeInjector`) is unchanged; the `foo.bar()` / `Foo.constructor()`
   entry points on the original class continue to work on the javac path.
-- A future enhancement (Phase 3) could add a proper JDT/ECJ plugin to inject virtual members
-  into JDT's AST, making the ergonomic `foo.bar()` syntax available in the IDE as well.
+- ECJ/VS Code Java still lacks full support (needs a JDT plugin); the AST injection provides
+  immediate value for IntelliJ IDEA and other javac-based tools.

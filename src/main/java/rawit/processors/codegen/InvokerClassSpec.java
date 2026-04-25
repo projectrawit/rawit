@@ -79,11 +79,6 @@ public class InvokerClassSpec {
                     .build());
         }
 
-        // Add static IDE entry-point method — mirrors the bytecode-injected method on the
-        // original class so that IDE tools (JDT LS / ECJ) can discover the entry point
-        // directly from the generated source without requiring bytecode injection to succeed.
-        classBuilder.addMethod(buildStaticEntryPointMethod(representative));
-
         // Generate stage method implementations and accumulator inner classes
         final List<TypeSpec> accumulators = new ArrayList<>();
         buildStageImplementations(classBuilder, accumulators, tree.root(), List.of(), representative);
@@ -100,75 +95,6 @@ public class InvokerClassSpec {
         classBuilder.addType(new TerminalInterfaceSpec(representative).build());
 
         return classBuilder.build();
-    }
-
-    // -------------------------------------------------------------------------
-    // Static IDE entry-point method
-    // -------------------------------------------------------------------------
-
-    /**
-     * Builds the {@code public static} entry-point method on the generated Invoker_Class.
-     *
-     * <p>This method mirrors the parameterless overload that the {@link
-     * rawit.processors.inject.BytecodeInjector} injects into the original class's bytecode,
-     * making the entry point discoverable by IDE tools (JDT LS / ECJ) directly from the
-     * generated source — without requiring the bytecode injection step to succeed.
-     *
-     * <p>Method name and signature follow the same rules as
-     * {@link rawit.processors.inject.BytecodeInjector.InjectionClassVisitor#resolveOverloadName}:
-     * <ul>
-     *   <li>{@code @Constructor} → {@code public static FooConstructor constructor()}</li>
-     *   <li>{@code @Invoker} on constructor → {@code public static FooInvoker foo()} (lowercase)</li>
-     *   <li>{@code @Invoker} on static method {@code bar} → {@code public static FooBarInvoker bar()}</li>
-     *   <li>{@code @Invoker} on instance method {@code bar} →
-     *       {@code public static FooBarInvoker bar(Foo instance)}</li>
-     * </ul>
-     *
-     * @param representative a representative method from the overload group
-     * @return the {@link MethodSpec} for the static entry-point
-     */
-    private MethodSpec buildStaticEntryPointMethod(final AnnotatedMethod representative) {
-        final String entryPointName = resolveEntryPointName(representative);
-        final TypeName callerType = com.squareup.javapoet.ClassName.bestGuess(callerClassName);
-
-        final MethodSpec.Builder mb = MethodSpec.methodBuilder(entryPointName)
-                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                .returns(callerType);
-
-        if (!representative.isStatic() && !representative.isConstructor()) {
-            // Instance method: require the enclosing instance as a parameter
-            final TypeName enclosingType = enclosingTypeName();
-            mb.addParameter(enclosingType, "instance");
-            mb.addStatement("return new $L(instance)", callerClassName);
-        } else {
-            // Static method, constructor, or @Constructor: no additional parameter
-            mb.addStatement("return new $L()", callerClassName);
-        }
-
-        return mb.build();
-    }
-
-    /**
-     * Resolves the entry-point method name that mirrors the bytecode-injected overload name.
-     *
-     * @param representative a representative {@link AnnotatedMethod} from the overload group
-     * @return the entry-point method name
-     */
-    private String resolveEntryPointName(final AnnotatedMethod representative) {
-        if (!isInvoker) {
-            // @Constructor annotation: entry point is always "constructor"
-            return "constructor";
-        }
-        final String groupName = tree.group().groupName();
-        if ("<init>".equals(groupName)) {
-            // @Invoker on a constructor: entry point is the lowercase simple class name
-            final String enclosing = tree.group().enclosingClassName();
-            final int lastSlash = enclosing.lastIndexOf('/');
-            final String simpleName = lastSlash < 0 ? enclosing : enclosing.substring(lastSlash + 1);
-            return simpleName.toLowerCase(java.util.Locale.ROOT);
-        }
-        // @Invoker on a regular method: entry point name is the method name
-        return groupName;
     }
 
     // -------------------------------------------------------------------------

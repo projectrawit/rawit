@@ -882,136 +882,122 @@ class RawitAnnotationProcessorIntegrationTest {
     }
 
     // =========================================================================
-    // IDE entry-point tests — static factory methods on generated Invoker classes
-    //
-    // These tests verify that the static IDE entry-point methods added to generated
-    // Invoker/Constructor classes work correctly end-to-end.  The static entry-points
-    // are source-visible (not bytecode-injected), so they are discoverable by JDT LS /
-    // ECJ in VS Code Java without requiring a workspace clean.
-    //
-    // For each annotated element the generated class exposes:
-    //   @Constructor Foo          → FooConstructor.constructor()
-    //   @Invoker static Foo.bar() → FooBarInvoker.bar()
-    //   @Invoker        Foo.bar() → FooBarInvoker.bar(Foo instance)
-    //   @Invoker  Foo(int x, int y)→ FooInvoker.foo()
+    // AST injection tests — entry-point visible on the ORIGINAL class (Lombok-like)
+    // These tests verify that after a single-pass compile with the processor,
+    // the entry-point method (e.g. Foo.constructor(), Foo.bar()) is present
+    // directly on the ORIGINAL annotated class, not just on the generated class.
+    // Validates: issue "Lombok-like instant IDE reflection for generated APIs"
     // =========================================================================
 
     @Test
-    void ideEntryPoint_constructorAnnotation_staticFactoryOnGeneratedClass(
-            @TempDir final Path outputDir) throws Exception {
+    void astInjection_constructorAnnotation_entryPointOnOriginalClass(@TempDir final Path outputDir)
+            throws Exception {
         final String source =
                 "package testpkg;\n" +
                 "import rawit.Constructor;\n" +
-                "public class IdePoint {\n" +
+                "public class AstCtorFoo {\n" +
                 "    public final int x;\n" +
                 "    public final int y;\n" +
                 "    @Constructor\n" +
-                "    public IdePoint(int x, int y) { this.x = x; this.y = y; }\n" +
+                "    public AstCtorFoo(int x, int y) { this.x = x; this.y = y; }\n" +
                 "}\n";
 
         try (final URLClassLoader loader =
-                     compileAndLoad("testpkg.IdePoint", source, outputDir)) {
+                     compileSinglePassAndLoad("testpkg.AstCtorFoo", source, outputDir)) {
+            final Class<?> cls = loader.loadClass("testpkg.AstCtorFoo");
 
-            // The IDE path: use FooConstructor.constructor() instead of Foo.constructor()
-            final Class<?> generatedClass =
-                    loader.loadClass("testpkg.generated.IdePointConstructor");
-
-            // Static entry-point: IdePointConstructor.constructor()
-            final java.lang.reflect.Method ideEntry =
-                    generatedClass.getMethod("constructor");
-            assertNotNull(ideEntry, "FooConstructor.constructor() must exist as a static method");
-            assertTrue(
-                    java.lang.reflect.Modifier.isStatic(ideEntry.getModifiers()),
+            // The entry-point method "constructor()" must exist on the ORIGINAL class
+            // (injected via javac AST injection, not on a separate generated class)
+            java.lang.reflect.Method constructor = cls.getMethod("constructor");
+            assertNotNull(constructor,
+                    "constructor() must be visible on the original class AstCtorFoo");
+            assertTrue(java.lang.reflect.Modifier.isStatic(constructor.getModifiers()),
                     "constructor() must be static");
+            assertTrue(java.lang.reflect.Modifier.isPublic(constructor.getModifiers()),
+                    "constructor() must be public");
 
-            // Chain via IDE entry-point
-            final Object stage0 = ideEntry.invoke(null);
-            final Object stage1 = invokeInt(stage0, "x", 7);
-            final Object stage2 = invokeInt(stage1, "y", 8);
-            final Object point = invoke(stage2, "construct");
+            // Exercise the chain: AstCtorFoo.constructor().x(3).y(7).construct()
+            final Object constructorStage = constructor.invoke(null);
+            final Object xStage = invokeInt(constructorStage, "x", 3);
+            final Object constructStage = invokeInt(xStage, "y", 7);
+            final Object instance = invoke(constructStage, "construct");
 
-            final Class<?> pointClass = loader.loadClass("testpkg.IdePoint");
-            assertNotNull(point);
-            assertInstanceOf(pointClass, point);
-            assertEquals(7, pointClass.getField("x").get(point), "IDE path: x must be 7");
-            assertEquals(8, pointClass.getField("y").get(point), "IDE path: y must be 8");
+            assertNotNull(instance);
+            assertInstanceOf(cls, instance);
+            assertEquals(3, cls.getField("x").get(instance));
+            assertEquals(7, cls.getField("y").get(instance));
         }
     }
 
     @Test
-    void ideEntryPoint_invokerOnStaticMethod_staticFactoryOnGeneratedClass(
-            @TempDir final Path outputDir) throws Exception {
+    void astInjection_instanceInvoker_entryPointOnOriginalClass(@TempDir final Path outputDir)
+            throws Exception {
         final String source =
                 "package testpkg;\n" +
                 "import rawit.Invoker;\n" +
-                "public class IdeCalc {\n" +
+                "public class AstInvFoo {\n" +
                 "    @Invoker\n" +
-                "    public static int add(int x, int y) { return x + y; }\n" +
+                "    public int multiply(int x, int y) { return x * y; }\n" +
                 "}\n";
 
         try (final URLClassLoader loader =
-                     compileAndLoad("testpkg.IdeCalc", source, outputDir)) {
+                     compileSinglePassAndLoad("testpkg.AstInvFoo", source, outputDir)) {
+            final Class<?> cls = loader.loadClass("testpkg.AstInvFoo");
 
-            final Class<?> generatedClass =
-                    loader.loadClass("testpkg.generated.IdeCalcAddInvoker");
+            // The entry-point method "multiply()" must exist on the ORIGINAL class
+            java.lang.reflect.Method multiply = cls.getMethod("multiply");
+            assertNotNull(multiply,
+                    "multiply() must be visible on the original class AstInvFoo");
+            assertFalse(java.lang.reflect.Modifier.isStatic(multiply.getModifiers()),
+                    "instance @Invoker entry-point must NOT be static");
+            assertTrue(java.lang.reflect.Modifier.isPublic(multiply.getModifiers()),
+                    "multiply() must be public");
 
-            // Static entry-point: IdeCalcAddInvoker.add()
-            final java.lang.reflect.Method ideEntry =
-                    generatedClass.getMethod("add");
-            assertNotNull(ideEntry, "FooBarInvoker.add() must exist as a static method");
-            assertTrue(
-                    java.lang.reflect.Modifier.isStatic(ideEntry.getModifiers()),
-                    "add() must be static");
+            // Exercise via chain: new AstInvFoo().multiply().x(3).y(4).invoke() == 12
+            final Object foo = cls.getDeclaredConstructor().newInstance();
+            final Object multiplyStage = multiply.invoke(foo);
+            final Object xStage = invokeInt(multiplyStage, "x", 3);
+            final Object resultStage = invokeInt(xStage, "y", 4);
+            final Object result = invoke(resultStage, "invoke");
 
-            // Chain: IdeCalcAddInvoker.add().x(10).y(5).invoke() == 15
-            final Object stage0 = ideEntry.invoke(null);
-            final Object stage1 = invokeInt(stage0, "x", 10);
-            final Object stage2 = invokeInt(stage1, "y", 5);
-            final Object result = invoke(stage2, "invoke");
-
-            assertEquals(15, result, "IDE path: add().x(10).y(5).invoke() must equal 15");
+            assertEquals(12, result, "multiply().x(3).y(4).invoke() must equal 3*4=12");
         }
     }
 
     @Test
-    void ideEntryPoint_invokerOnInstanceMethod_staticFactoryOnGeneratedClass(
-            @TempDir final Path outputDir) throws Exception {
+    void astInjection_staticInvoker_entryPointOnOriginalClass(@TempDir final Path outputDir)
+            throws Exception {
         final String source =
                 "package testpkg;\n" +
                 "import rawit.Invoker;\n" +
-                "public class IdeAdder {\n" +
-                "    private final int base;\n" +
-                "    public IdeAdder(int base) { this.base = base; }\n" +
+                "public class AstStaticFoo {\n" +
                 "    @Invoker\n" +
-                "    public int add(int x, int y) { return base + x + y; }\n" +
+                "    public static String greet(String name, String greeting) {\n" +
+                "        return greeting + \", \" + name + \"!\";\n" +
+                "    }\n" +
                 "}\n";
 
         try (final URLClassLoader loader =
-                     compileAndLoad("testpkg.IdeAdder", source, outputDir)) {
+                     compileSinglePassAndLoad("testpkg.AstStaticFoo", source, outputDir)) {
+            final Class<?> cls = loader.loadClass("testpkg.AstStaticFoo");
 
-            final Class<?> adderClass = loader.loadClass("testpkg.IdeAdder");
-            final Object adder = adderClass.getDeclaredConstructor(int.class).newInstance(10);
+            // The entry-point method "greet()" must exist on the ORIGINAL class
+            java.lang.reflect.Method greet = cls.getMethod("greet");
+            assertNotNull(greet,
+                    "greet() must be visible on the original class AstStaticFoo");
+            assertTrue(java.lang.reflect.Modifier.isStatic(greet.getModifiers()),
+                    "static @Invoker entry-point must be static");
+            assertTrue(java.lang.reflect.Modifier.isPublic(greet.getModifiers()),
+                    "greet() must be public");
 
-            final Class<?> generatedClass =
-                    loader.loadClass("testpkg.generated.IdeAdderAddInvoker");
+            // Exercise via chain: AstStaticFoo.greet().name("World").greeting("Hello").invoke()
+            final Object greetStage = greet.invoke(null);
+            final Object nameStage = invokeString(greetStage, "name", "World");
+            final Object resultStage = invokeString(nameStage, "greeting", "Hello");
+            final Object result = invoke(resultStage, "invoke");
 
-            // Static entry-point: IdeAdderAddInvoker.add(IdeAdder instance)
-            final java.lang.reflect.Method ideEntry =
-                    generatedClass.getMethod("add", adderClass);
-            assertNotNull(ideEntry,
-                    "FooBarInvoker.add(Foo instance) must exist as a static method");
-            assertTrue(
-                    java.lang.reflect.Modifier.isStatic(ideEntry.getModifiers()),
-                    "add(instance) must be static");
-
-            // Chain: IdeAdderAddInvoker.add(adder).x(3).y(4).invoke() == 10+3+4 = 17
-            final Object stage0 = ideEntry.invoke(null, adder);
-            final Object stage1 = invokeInt(stage0, "x", 3);
-            final Object stage2 = invokeInt(stage1, "y", 4);
-            final Object result = invoke(stage2, "invoke");
-
-            assertEquals(17, result,
-                    "IDE path: add(adder).x(3).y(4).invoke() must equal base+x+y = 17");
+            assertEquals("Hello, World!", result,
+                    "greet().name(\"World\").greeting(\"Hello\").invoke() must equal \"Hello, World!\"");
         }
     }
 }

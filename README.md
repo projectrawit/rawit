@@ -69,7 +69,7 @@ javac's post-generate phase via a `TaskListener` and injects bytecode after each
 written. On non-`javac` compilers (for example, ECJ), this single-pass injection path is not
 guaranteed, so fallback behavior or additional compiler-specific configuration may be required.
 
-For VS Code Java users, see [IDE Integration](#-ide-integration-vs-code-java) below.
+For IDE integration details (IntelliJ IDEA, VS Code Java), see [IDE Integration](#-ide-integration-intellij-idea--javac-based-ides) below.
 
 ### 2. Annotate your code
 
@@ -368,47 +368,45 @@ Rawit catches mistakes early. You'll get a clear `javac` error for:
 
 ---
 
-## 💡 IDE Integration (VS Code Java)
+## 💡 IDE Integration (IntelliJ IDEA / javac-based IDEs)
 
-Rawit is designed to work with any Java build tool, but VS Code Java (JDT LS / ECJ) requires a
-small extra step because the JDT Language Server rebuilds its type model from **source files**,
-not bytecode. The entry-point methods injected into `.class` files by `BytecodeInjector`
-(e.g. `Foo.constructor()`, `foo.bar()`) may not be immediately visible to JDT LS.
+Rawit is designed to work with any Java build tool. When running under javac (CLI, Maven, Gradle,
+IntelliJ IDEA with javac backend), the annotation processor injects entry-point methods directly
+into the **original class's AST** using a Lombok-like approach — just as `@Builder` adds
+`Foo.builder()` directly to `Foo`.
 
-### Instant IDE reflection — generated class entry-points
+### Lombok-like entry-point injection
 
-Every generated Invoker / Constructor class contains a **`public static` IDE entry-point** that
-mirrors the bytecode-injected method. Because this method is part of the generated *source* file,
-JDT LS indexes it immediately after annotation processing runs — no workspace clean required.
+The processor uses javac's `TreeMaker` API (the same technique Lombok uses) to insert
+entry-point methods into the annotated class during annotation processing. The methods are
+source-visible to the javac type-checker in the same compilation pass — no workspace clean
+or extra build step required.
 
-| Annotation path | Bytecode entry-point (CLI) | Generated class entry-point (IDE) |
-|-----------------|----------------------------|-----------------------------------|
-| `@Constructor` on `Foo` | `Foo.constructor()` | `FooConstructor.constructor()` |
-| `@Invoker` on `Foo.bar()` (instance) | `foo.bar()` | `FooBarInvoker.bar(foo)` |
-| `@Invoker` on static `Foo.bar()` | `Foo.bar()` | `FooBarInvoker.bar()` |
-| `@Invoker` on constructor `Foo(int x)` | `Foo.foo()` | `FooInvoker.foo()` |
+| Annotation path | Entry-point on original class |
+|-----------------|-------------------------------|
+| `@Constructor` on `Foo` | `Foo.constructor()` |
+| `@Invoker` on `Foo.bar()` (instance) | `foo.bar()` |
+| `@Invoker` on static `Foo.bar()` | `Foo.bar()` |
+| `@Invoker` on constructor `Foo(int x)` | `Foo.foo()` |
 
-The two entry-points produce **identical chains** and **identical results**:
+The same API is available whether you compile via the CLI or via your IDE:
 
 ```java
-// CLI / javac path (bytecode-injected entry-point)
+// CLI / javac — bytecode-injected entry-point (runtime)
 Point p = Point.constructor().x(1).y(2).construct();
 
-// IDE path (source-visible entry-point on generated class)
-Point p = PointConstructor.constructor().x(1).y(2).construct();
+// IntelliJ IDEA / javac — AST-injected entry-point (source-visible, same method)
+Point p = Point.constructor().x(1).y(2).construct();
 ```
 
-### Tip: import the generated package
+Both paths use the exact same method name on the exact same class.
 
-Generated classes live in the `generated` sub-package of the original class. For example,
-`class com.example.Point` → generated class `com.example.generated.PointConstructor`. Import the
-generated package for quick IDE completion:
+### VS Code Java (JDT LS / ECJ)
 
-```java
-import com.example.generated.PointConstructor;
-
-Point p = PointConstructor.constructor().x(1).y(2).construct();
-```
+VS Code Java runs annotation processors via ECJ, not javac. Because `JavacAstInjector` requires
+the javac `TreeMaker` API, AST injection is a no-op under ECJ. A full JDT/ECJ plugin (similar to
+lombok-eclipse) is required for first-class VS Code Java support and is tracked as a future
+enhancement.
 
 ---
 
