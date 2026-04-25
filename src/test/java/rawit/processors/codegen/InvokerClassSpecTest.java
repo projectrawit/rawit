@@ -211,4 +211,69 @@ class InvokerClassSpecTest {
         String source = toSource(spec);
         assertTrue(source.contains("throws IOException"), "checked exceptions must appear in stage methods");
     }
+
+    // -------------------------------------------------------------------------
+    // Static IDE entry-point method — Phase 1 IDE integration
+    // -------------------------------------------------------------------------
+
+    @Test
+    void instanceMethod_hasStaticEntryPointWithInstanceParameter() {
+        // @Invoker on instance method bar: FooBarInvoker.bar(Foo instance) — IDE entry point
+        AnnotatedMethod m = instanceMethod("bar", "V", List.of(), p("x", "I"));
+        TypeSpec spec = new InvokerClassSpec(linearTree(m)).build();
+        String source = toSource(spec);
+        assertTrue(source.contains("public static FooBarInvoker bar(Foo instance)"),
+                "instance method must have static IDE entry-point bar(Foo instance)");
+        assertTrue(source.contains("return new FooBarInvoker(instance)"),
+                "static entry-point must return new FooBarInvoker(instance)");
+    }
+
+    @Test
+    void staticMethod_hasStaticEntryPointWithNoParameter() {
+        // @Invoker on static method bar: FooBarInvoker.bar() — IDE entry point
+        AnnotatedMethod m = staticMethod("bar", "V", p("x", "I"));
+        TypeSpec spec = new InvokerClassSpec(linearTree(m)).build();
+        String source = toSource(spec);
+        assertTrue(source.contains("public static FooBarInvoker bar()"),
+                "static method must have zero-arg static IDE entry-point bar()");
+        assertTrue(source.contains("return new FooBarInvoker()"),
+                "static entry-point must return new FooBarInvoker()");
+    }
+
+    @Test
+    void constructorAnnotation_hasStaticEntryPointNamedConstructor() {
+        // @Constructor: FooConstructor.constructor() — IDE entry point
+        AnnotatedMethod m = constructorMethod(p("id", "I"));
+        TypeSpec spec = new InvokerClassSpec(linearTree(m)).build();
+        String source = toSource(spec);
+        assertTrue(source.contains("public static FooConstructor constructor()"),
+                "@Constructor must have static IDE entry-point constructor()");
+        assertTrue(source.contains("return new FooConstructor()"),
+                "static entry-point must return new FooConstructor()");
+    }
+
+    @Test
+    void invokerOnConstructor_hasStaticEntryPointNamedAfterClass() {
+        // @Invoker on constructor Foo(...): FooInvoker.foo() — IDE entry point
+        AnnotatedMethod m = new AnnotatedMethod("com/example/Foo", "<init>", false, true,
+                false, List.of(p("x", "I")), "V", List.of(), 0x0001);
+        TypeSpec spec = new InvokerClassSpec(linearTree(m)).build();
+        String source = toSource(spec);
+        assertTrue(source.contains("public static FooInvoker foo()"),
+                "@Invoker on constructor must have static IDE entry-point foo()");
+        assertTrue(source.contains("return new FooInvoker()"),
+                "static entry-point must return new FooInvoker()");
+    }
+
+    @Test
+    void staticEntryPointAndStageMethods_areBothPresent() {
+        // Ensure the static entry-point doesn't shadow the stage methods
+        AnnotatedMethod m = instanceMethod("bar", "I", List.of(), p("x", "I"), p("y", "I"));
+        TypeSpec spec = new InvokerClassSpec(linearTree(m)).build();
+        String source = toSource(spec);
+        assertTrue(source.contains("public static FooBarInvoker bar(Foo instance)"),
+                "static IDE entry-point must be present");
+        assertTrue(source.contains("public YStageInvoker x(int x)"),
+                "stage method must still be present");
+    }
 }

@@ -880,4 +880,138 @@ class RawitAnnotationProcessorIntegrationTest {
                     "single-pass: getAge() must return 30");
         }
     }
+
+    // =========================================================================
+    // IDE entry-point tests — static factory methods on generated Invoker classes
+    //
+    // These tests verify that the static IDE entry-point methods added to generated
+    // Invoker/Constructor classes work correctly end-to-end.  The static entry-points
+    // are source-visible (not bytecode-injected), so they are discoverable by JDT LS /
+    // ECJ in VS Code Java without requiring a workspace clean.
+    //
+    // For each annotated element the generated class exposes:
+    //   @Constructor Foo          → FooConstructor.constructor()
+    //   @Invoker static Foo.bar() → FooBarInvoker.bar()
+    //   @Invoker        Foo.bar() → FooBarInvoker.bar(Foo instance)
+    //   @Invoker  Foo(int x, int y)→ FooInvoker.foo()
+    // =========================================================================
+
+    @Test
+    void ideEntryPoint_constructorAnnotation_staticFactoryOnGeneratedClass(
+            @TempDir final Path outputDir) throws Exception {
+        final String source =
+                "package testpkg;\n" +
+                "import rawit.Constructor;\n" +
+                "public class IdePoint {\n" +
+                "    public final int x;\n" +
+                "    public final int y;\n" +
+                "    @Constructor\n" +
+                "    public IdePoint(int x, int y) { this.x = x; this.y = y; }\n" +
+                "}\n";
+
+        try (final URLClassLoader loader =
+                     compileAndLoad("testpkg.IdePoint", source, outputDir)) {
+
+            // The IDE path: use FooConstructor.constructor() instead of Foo.constructor()
+            final Class<?> generatedClass =
+                    loader.loadClass("testpkg.generated.IdePointConstructor");
+
+            // Static entry-point: IdePointConstructor.constructor()
+            final java.lang.reflect.Method ideEntry =
+                    generatedClass.getMethod("constructor");
+            assertNotNull(ideEntry, "FooConstructor.constructor() must exist as a static method");
+            assertTrue(
+                    java.lang.reflect.Modifier.isStatic(ideEntry.getModifiers()),
+                    "constructor() must be static");
+
+            // Chain via IDE entry-point
+            final Object stage0 = ideEntry.invoke(null);
+            final Object stage1 = invokeInt(stage0, "x", 7);
+            final Object stage2 = invokeInt(stage1, "y", 8);
+            final Object point = invoke(stage2, "construct");
+
+            final Class<?> pointClass = loader.loadClass("testpkg.IdePoint");
+            assertNotNull(point);
+            assertInstanceOf(pointClass, point);
+            assertEquals(7, pointClass.getField("x").get(point), "IDE path: x must be 7");
+            assertEquals(8, pointClass.getField("y").get(point), "IDE path: y must be 8");
+        }
+    }
+
+    @Test
+    void ideEntryPoint_invokerOnStaticMethod_staticFactoryOnGeneratedClass(
+            @TempDir final Path outputDir) throws Exception {
+        final String source =
+                "package testpkg;\n" +
+                "import rawit.Invoker;\n" +
+                "public class IdeCalc {\n" +
+                "    @Invoker\n" +
+                "    public static int add(int x, int y) { return x + y; }\n" +
+                "}\n";
+
+        try (final URLClassLoader loader =
+                     compileAndLoad("testpkg.IdeCalc", source, outputDir)) {
+
+            final Class<?> generatedClass =
+                    loader.loadClass("testpkg.generated.IdeCalcAddInvoker");
+
+            // Static entry-point: IdeCalcAddInvoker.add()
+            final java.lang.reflect.Method ideEntry =
+                    generatedClass.getMethod("add");
+            assertNotNull(ideEntry, "FooBarInvoker.add() must exist as a static method");
+            assertTrue(
+                    java.lang.reflect.Modifier.isStatic(ideEntry.getModifiers()),
+                    "add() must be static");
+
+            // Chain: IdeCalcAddInvoker.add().x(10).y(5).invoke() == 15
+            final Object stage0 = ideEntry.invoke(null);
+            final Object stage1 = invokeInt(stage0, "x", 10);
+            final Object stage2 = invokeInt(stage1, "y", 5);
+            final Object result = invoke(stage2, "invoke");
+
+            assertEquals(15, result, "IDE path: add().x(10).y(5).invoke() must equal 15");
+        }
+    }
+
+    @Test
+    void ideEntryPoint_invokerOnInstanceMethod_staticFactoryOnGeneratedClass(
+            @TempDir final Path outputDir) throws Exception {
+        final String source =
+                "package testpkg;\n" +
+                "import rawit.Invoker;\n" +
+                "public class IdeAdder {\n" +
+                "    private final int base;\n" +
+                "    public IdeAdder(int base) { this.base = base; }\n" +
+                "    @Invoker\n" +
+                "    public int add(int x, int y) { return base + x + y; }\n" +
+                "}\n";
+
+        try (final URLClassLoader loader =
+                     compileAndLoad("testpkg.IdeAdder", source, outputDir)) {
+
+            final Class<?> adderClass = loader.loadClass("testpkg.IdeAdder");
+            final Object adder = adderClass.getDeclaredConstructor(int.class).newInstance(10);
+
+            final Class<?> generatedClass =
+                    loader.loadClass("testpkg.generated.IdeAdderAddInvoker");
+
+            // Static entry-point: IdeAdderAddInvoker.add(IdeAdder instance)
+            final java.lang.reflect.Method ideEntry =
+                    generatedClass.getMethod("add", adderClass);
+            assertNotNull(ideEntry,
+                    "FooBarInvoker.add(Foo instance) must exist as a static method");
+            assertTrue(
+                    java.lang.reflect.Modifier.isStatic(ideEntry.getModifiers()),
+                    "add(instance) must be static");
+
+            // Chain: IdeAdderAddInvoker.add(adder).x(3).y(4).invoke() == 10+3+4 = 17
+            final Object stage0 = ideEntry.invoke(null, adder);
+            final Object stage1 = invokeInt(stage0, "x", 3);
+            final Object stage2 = invokeInt(stage1, "y", 4);
+            final Object result = invoke(stage2, "invoke");
+
+            assertEquals(17, result,
+                    "IDE path: add(adder).x(3).y(4).invoke() must equal base+x+y = 17");
+        }
+    }
 }
