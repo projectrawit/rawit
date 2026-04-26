@@ -412,7 +412,7 @@ public class RawitAnnotationProcessor extends AbstractProcessor {
                 if (classElement == null) continue;
 
                 astInjector.inject(new JavacAstInjector.EntryPoint(
-                        classElement, entryPointName, callerFqn, instanceMethod, enclosingFqn,
+                        classElement, entryPointName, callerFqn, instanceMethod,
                         accessFlags));
 
                 if (debug) {

@@ -388,9 +388,10 @@ them immediately — no workspace clean required.
 > source-visible to the type-checker, add the following JVM argument to your compiler plugin:
 >
 > ```
-> --add-opens jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED
+> --add-opens jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED
 > --add-opens jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED
 > --add-opens jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED
+> --add-opens jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED
 > ```
 >
 > Even without these opens, bytecode injection still ensures the entry-points are present at runtime.

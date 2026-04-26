@@ -35,15 +35,12 @@ public class JavacAstInjector {
      *                       dot-separated (e.g. {@code "com.example.generated.FooBarInvoker"})
      * @param instanceMethod {@code true} if the method takes the enclosing class instance
      *                       as its sole parameter (non-static {@code @Invoker})
-     * @param enclosingFqn   FQN of the original class — only required when
-     *                       {@code instanceMethod} is {@code true}
      */
     public record EntryPoint(
             TypeElement classElement,
             String methodName,
             String callerFqn,
             boolean instanceMethod,
-            String enclosingFqn,
             long accessFlags) {}
 
     // -------------------------------------------------------------------------
@@ -58,7 +55,6 @@ public class JavacAstInjector {
     private final Method tmModifiers;
     private final Method tmIdent;
     private final Method tmSelect;
-    private final Method tmVarDef;
     private final Method tmBlock;
     private final Method tmReturn;
     private final Method tmNewClass;
@@ -77,7 +73,7 @@ public class JavacAstInjector {
 
     private JavacAstInjector(
             Object treeMaker, Object names, Trees trees,
-            Method tmModifiers, Method tmIdent, Method tmSelect, Method tmVarDef,
+            Method tmModifiers, Method tmIdent, Method tmSelect,
             Method tmBlock, Method tmReturn, Method tmNewClass, Method tmMethodDef,
             Method nmFromString, Field jcClassDeclDefs,
             Class<?> jcClassDeclClass, Class<?> jcMethodDeclClass,
@@ -89,7 +85,6 @@ public class JavacAstInjector {
         this.tmModifiers = tmModifiers;
         this.tmIdent = tmIdent;
         this.tmSelect = tmSelect;
-        this.tmVarDef = tmVarDef;
         this.tmBlock = tmBlock;
         this.tmReturn = tmReturn;
         this.tmNewClass = tmNewClass;
@@ -139,7 +134,6 @@ public class JavacAstInjector {
             final Class<?> nameClass = Class.forName("com.sun.tools.javac.util.Name");
             final Class<?> jcExprClass = Class.forName("com.sun.tools.javac.tree.JCTree$JCExpression");
             final Class<?> jcModifiersClass = Class.forName("com.sun.tools.javac.tree.JCTree$JCModifiers");
-            final Class<?> jcVarDeclClass = Class.forName("com.sun.tools.javac.tree.JCTree$JCVariableDecl");
             final Class<?> jcBlockClass = Class.forName("com.sun.tools.javac.tree.JCTree$JCBlock");
             final Class<?> jcClassDeclClass = Class.forName("com.sun.tools.javac.tree.JCTree$JCClassDecl");
             final Class<?> jcMethodDeclClass = Class.forName("com.sun.tools.javac.tree.JCTree$JCMethodDecl");
@@ -160,9 +154,6 @@ public class JavacAstInjector {
             tmIdent.setAccessible(true);
             final Method tmSelect = treeMakerClass.getMethod("Select", jcExprClass, nameClass);
             tmSelect.setAccessible(true);
-            final Method tmVarDef = treeMakerClass.getMethod("VarDef",
-                    jcModifiersClass, nameClass, jcExprClass, jcExprClass);
-            tmVarDef.setAccessible(true);
             final Method tmBlock = treeMakerClass.getMethod("Block", long.class, listClass);
             tmBlock.setAccessible(true);
             final Method tmReturn = treeMakerClass.getMethod("Return", jcExprClass);
@@ -209,7 +200,7 @@ public class JavacAstInjector {
 
             return new JavacAstInjector(
                     treeMaker, names, trees,
-                    tmModifiers, tmIdent, tmSelect, tmVarDef,
+                    tmModifiers, tmIdent, tmSelect,
                     tmBlock, tmReturn, tmNewClass, tmMethodDef,
                     nmFromString, jcClassDeclDefs,
                     jcClassDeclClass, jcMethodDeclClass,
