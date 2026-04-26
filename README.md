@@ -69,7 +69,7 @@ javac's post-generate phase via a `TaskListener` and injects bytecode after each
 written. On non-`javac` compilers (for example, ECJ), this single-pass injection path is not
 guaranteed, so fallback behavior or additional compiler-specific configuration may be required.
 
-For VS Code Java users, see [IDE Integration](#-ide-integration-vs-code-java) below.
+For VS Code Java users, see [IDE Integration](#ide-integration-vs-code-java) below.
 
 ### 2. Annotate your code
 

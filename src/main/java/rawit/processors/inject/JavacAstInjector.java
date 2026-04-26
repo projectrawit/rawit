@@ -242,15 +242,14 @@ public class JavacAstInjector {
 
             if (methodExists(tree, entryPoint.methodName())) return;
 
-            // Build return-type expression: fully-qualified name via chained Select nodes
-            final Object returnTypeExpr = buildFQNExpr(entryPoint.callerFqn());
+            // Build caller-type expression once: fully-qualified name via chained Select nodes
+            final Object callerTypeExpr = buildFQNExpr(entryPoint.callerFqn());
 
             // Instance @Invoker: public CallerType bar() { return new CallerType(this); }
             // All other cases: public static CallerType method() { return new CallerType(); }
             final Object paramsList = listNil; // entry-point is always zero-argument
 
             // Build constructor-call argument list
-            final Object newCallerTypeExpr = buildFQNExpr(entryPoint.callerFqn());
             final Object ctorArgsList;
             if (entryPoint.instanceMethod()) {
                 // Pass 'this' to the caller class constructor
@@ -263,7 +262,7 @@ public class JavacAstInjector {
             final Object newExpr = tmNewClass.invoke(treeMaker,
                     null,            // enclosing expression (none — top-level class)
                     listNil,         // type arguments
-                    newCallerTypeExpr,
+                    callerTypeExpr,
                     ctorArgsList,
                     null);           // anonymous class body
 
@@ -280,7 +279,7 @@ public class JavacAstInjector {
             final Object methodDecl = tmMethodDef.invoke(treeMaker,
                     mods,
                     nmFromString.invoke(names, entryPoint.methodName()),
-                    returnTypeExpr,
+                    callerTypeExpr,
                     listNil,     // type parameters
                     paramsList,  // method parameters (always empty)
                     listNil,     // thrown types
